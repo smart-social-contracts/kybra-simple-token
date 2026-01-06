@@ -143,6 +143,7 @@ jobs:
             -v "$(pwd)/deploy-staging-logs:/app/deploy-staging-logs" \
             -v "$HOME/.config/dfx:/root/.config/dfx" \
             ghcr.io/${{ github.repository_owner }}/kybra-simple-token:${{ needs.release.outputs.version }} bash -c "
+          dfxvm default 0.29.0 && \
           dfx identity use ci && \
           ./scripts/deploy_staging.sh 2>&1; \
           EXIT_CODE=\$?; \
