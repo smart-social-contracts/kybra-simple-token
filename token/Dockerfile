@@ -22,6 +22,7 @@ COPY tsconfig.json ./tsconfig.json
 # Source code
 COPY src ./src
 COPY tests ./tests
+COPY scripts ./scripts
 
 # Test stage
 FROM base AS test
