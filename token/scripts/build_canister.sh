@@ -31,6 +31,8 @@ gzip -k "../$OUTPUT_DIR/token_backend.wasm"
 
 # Build frontend canister
 echo "Building token_frontend canister..."
+echo "Installing frontend dependencies..."
+cd src/token_frontend && npm install && cd ../..
 dfx canister create token_frontend
 dfx build token_frontend
 
