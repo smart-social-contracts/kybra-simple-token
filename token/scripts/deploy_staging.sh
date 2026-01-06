@@ -5,6 +5,9 @@
 
 set -e
 
+# Ensure dfxvm default is set (may be reset by volume mounts)
+dfxvm default 0.29.0 2>/dev/null || true
+
 # Navigate to token dir if we're at repo root
 if [ -d "token/src" ]; then
     cd token
