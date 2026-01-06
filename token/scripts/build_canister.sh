@@ -21,7 +21,8 @@ if ! dfx ping &>/dev/null; then
     sleep 2
 fi
 
-# Build the canister
+# Create and build the canister
+dfx canister create token_backend
 dfx build token_backend
 
 # Copy artifacts
