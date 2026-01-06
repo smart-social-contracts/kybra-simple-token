@@ -1,13 +1,11 @@
 #!/bin/bash
-# Build canister and extract wasm/did artifacts
+# Build canisters and extract wasm/did artifacts
 # Usage: ./token/scripts/build_canister.sh [output_dir]
 
 set -e
 
 OUTPUT_DIR="${1:-artifacts}"
 mkdir -p "$OUTPUT_DIR"
-
-echo "Building token_backend canister..."
 
 # Navigate to token dir if we're at repo root
 if [ -d "token/src" ]; then
@@ -21,16 +19,25 @@ if ! dfx ping &>/dev/null; then
     sleep 2
 fi
 
-# Create and build the canister
+# Build backend canister
+echo "Building token_backend canister..."
 dfx canister create token_backend
 dfx build token_backend
 
-# Copy artifacts
+# Copy backend artifacts
 cp .kybra/token_backend/token_backend.wasm "../$OUTPUT_DIR/"
 cp src/token_backend/token_backend.did "../$OUTPUT_DIR/"
-
-# Create gzipped version
 gzip -k "../$OUTPUT_DIR/token_backend.wasm"
+
+# Build frontend canister
+echo "Building token_frontend canister..."
+dfx canister create token_frontend
+dfx build token_frontend
+
+# Copy frontend artifacts
+cp .dfx/local/canisters/token_frontend/assetstorage.wasm.gz "../$OUTPUT_DIR/token_frontend.wasm.gz"
+gunzip -k "../$OUTPUT_DIR/token_frontend.wasm.gz"
+cp .dfx/local/canisters/token_frontend/assetstorage.did "../$OUTPUT_DIR/token_frontend.did"
 
 # Build info
 echo "Build Date: $(date -u)" > "../$OUTPUT_DIR/BUILD_INFO.txt"

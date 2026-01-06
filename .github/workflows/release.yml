@@ -107,6 +107,9 @@ jobs:
             artifacts/token_backend.wasm.gz
             artifacts/token_backend.wasm
             artifacts/token_backend.did
+            artifacts/token_frontend.wasm.gz
+            artifacts/token_frontend.wasm
+            artifacts/token_frontend.did
             artifacts/BUILD_INFO.txt
           draft: false
           prerelease: false

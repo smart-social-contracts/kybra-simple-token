@@ -163,18 +163,32 @@ jobs:
           ./scripts/build_canister.sh /app/artifacts && \
           echo 'Build SHA: ${{ github.sha }}' >> /app/artifacts/BUILD_INFO.txt"
       
-      - name: Upload wasm artifact
+      - name: Upload backend wasm
         uses: actions/upload-artifact@v4
         with:
           name: token_backend.wasm
           path: artifacts/token_backend.wasm
           retention-days: 90
       
-      - name: Upload did artifact
+      - name: Upload backend did
         uses: actions/upload-artifact@v4
         with:
           name: token_backend.did
           path: artifacts/token_backend.did
+          retention-days: 90
+      
+      - name: Upload frontend wasm
+        uses: actions/upload-artifact@v4
+        with:
+          name: token_frontend.wasm
+          path: artifacts/token_frontend.wasm
+          retention-days: 90
+      
+      - name: Upload frontend did
+        uses: actions/upload-artifact@v4
+        with:
+          name: token_frontend.did
+          path: artifacts/token_frontend.did
           retention-days: 90
       
       - name: Upload all artifacts bundle
