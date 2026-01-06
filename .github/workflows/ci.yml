@@ -111,7 +111,7 @@ jobs:
       - name: Run linters
         run: |
           mkdir -p lint-logs
-          ./scripts/run_linters.sh 2>&1 | tee lint-logs/linters.log
+          ./token/scripts/run_linters.sh 2>&1 | tee lint-logs/linters.log
       
       - name: Upload lint logs
         if: always()

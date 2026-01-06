@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build canister and extract wasm/did artifacts
-# Usage: ./scripts/build_canister.sh [output_dir]
+# Usage: ./token/scripts/build_canister.sh [output_dir]
 
 set -e
 
@@ -9,7 +9,10 @@ mkdir -p "$OUTPUT_DIR"
 
 echo "Building token_backend canister..."
 
-cd token
+# Navigate to token dir if we're at repo root
+if [ -d "token/src" ]; then
+    cd token
+fi
 
 # Start dfx if not running
 if ! dfx ping &>/dev/null; then

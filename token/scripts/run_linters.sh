@@ -1,6 +1,6 @@
 #!/bin/bash
 # Simple script to run all linters from CI workflow locally
-# Usage: ./scripts/run_linters.sh [--fix]
+# Usage: ./token/scripts/run_linters.sh [--fix]
 #   --fix    Apply fixes automatically when possible (black, isort)
 
 set -e
@@ -14,9 +14,14 @@ else
     echo "Running linters in CHECK mode (use --fix to auto-format)..."
 fi
 
-# Target directories
-SRC_DIR="token/src/token_backend/src"
-TESTS_DIR="token/tests"
+# Determine base directory (works from repo root or token/)
+if [ -d "token/src" ]; then
+    SRC_DIR="token/src/token_backend/src"
+    TESTS_DIR="token/tests"
+else
+    SRC_DIR="src/token_backend/src"
+    TESTS_DIR="tests"
+fi
 
 # Check/fix formatting with black
 echo "Running black..."

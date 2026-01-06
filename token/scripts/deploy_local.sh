@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy canister locally and run basic tests
-# Usage: ./scripts/deploy_local.sh [--clean]
+# Usage: ./token/scripts/deploy_local.sh [--clean]
 
 set -e
 
@@ -9,7 +9,10 @@ if [ "$1" == "--clean" ]; then
     CLEAN=true
 fi
 
-cd token
+# Navigate to token dir if we're at repo root
+if [ -d "token/src" ]; then
+    cd token
+fi
 
 # Start dfx
 if [ "$CLEAN" = true ]; then
