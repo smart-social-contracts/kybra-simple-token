@@ -130,13 +130,13 @@ jobs:
       
       - name: Deploy to staging
         env:
-          DFX_IDENTITY_PEM: ${{ secrets.DFX_IDENTITY_PEM }}
+          IC_IDENTITY_PEM: ${{ secrets.IC_IDENTITY_PEM }}
         run: |
           mkdir -p deploy-staging-logs
           
           # Setup identity from secret
           mkdir -p ~/.config/dfx/identity/ci
-          echo "$DFX_IDENTITY_PEM" > ~/.config/dfx/identity/ci/identity.pem
+          echo "$IC_IDENTITY_PEM" > ~/.config/dfx/identity/ci/identity.pem
           chmod 600 ~/.config/dfx/identity/ci/identity.pem
           
           docker run --rm \
