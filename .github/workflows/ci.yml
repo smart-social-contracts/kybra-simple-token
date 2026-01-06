@@ -219,6 +219,7 @@ jobs:
           chmod 600 ~/.config/dfx/identity/ci/identity.pem
           
           docker run --rm \
+            -e DFX_WARNING=-mainnet_plaintext_identity \
             -v "$(pwd)/deploy-staging-logs:/app/deploy-staging-logs" \
             -v "$HOME/.config/dfx:/root/.config/dfx" \
             ghcr.io/${{ github.repository_owner }}/kybra-simple-token:test-${{ github.sha }} bash -c "
