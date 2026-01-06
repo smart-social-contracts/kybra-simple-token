@@ -2,6 +2,9 @@ FROM ghcr.io/smart-social-contracts/icp-dev-env:db60540 AS base
 
 RUN apt-get update && apt-get install -y --no-install-recommends procps nano jq && rm -rf /var/lib/apt/lists/*
 
+# Set default dfx version
+RUN dfxvm default 0.29.0
+
 WORKDIR /app
 
 # Dependencies
