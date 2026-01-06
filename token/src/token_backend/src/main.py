@@ -68,6 +68,17 @@ class TransferResult(Record):
     error: Opt[text]
 
 
+class MintArgs(Record):
+    to: Account
+    amount: nat
+
+
+class MintResult(Record):
+    success: bool
+    new_balance: Opt[nat]
+    error: Opt[text]
+
+
 class TokenMetadataRecord(Record):
     name: text
     symbol: text
@@ -124,11 +135,34 @@ class TokenHelper:
             TokenConfig(key="total_supply", value=str(supply))
 
 
+class OwnerHelper:
+    @staticmethod
+    def get_owner():
+        config = TokenConfig["owner"]
+        if config and config.value:
+            return config.value
+        return None
+
+    @staticmethod
+    def set_owner(owner):
+        config = TokenConfig["owner"]
+        if config:
+            config.value = owner
+            config.save()
+        else:
+            TokenConfig(key="owner", value=owner)
+
+    @staticmethod
+    def is_owner(principal):
+        return principal == OwnerHelper.get_owner()
+
+
 @init
 def init_() -> void:
     logger.info("Initializing token canister")
     initial_supply = 1_000_000_000 * (10 ** TOKEN_DECIMALS)
     deployer = ic.caller().to_str()
+    OwnerHelper.set_owner(deployer)
     TokenHelper.set_balance(deployer, initial_supply)
     TokenHelper.set_total_supply(initial_supply)
     logger.info(f"Token initialized. Initial supply: {initial_supply} to {deployer}")
@@ -220,6 +254,43 @@ def icrc1_transfer(args: TransferArgs) -> TransferResult:
         block_index=1,
         error=None
     )
+
+
+@update
+def mint(args: MintArgs) -> MintResult:
+    caller = ic.caller().to_str()
+    logger.info(f"Mint request from {caller}: {args.amount} to {args.to.owner.to_str()}")
+    
+    if not OwnerHelper.is_owner(caller):
+        logger.warning(f"Unauthorized mint attempt by {caller}")
+        return MintResult(
+            success=False,
+            new_balance=None,
+            error="Only the token owner can mint tokens"
+        )
+    
+    recipient = args.to.owner.to_str()
+    current_balance = TokenHelper.get_balance(recipient, args.to.subaccount)
+    new_balance = current_balance + args.amount
+    
+    TokenHelper.set_balance(recipient, new_balance, args.to.subaccount)
+    
+    current_supply = TokenHelper.get_total_supply()
+    TokenHelper.set_total_supply(current_supply + args.amount)
+    
+    logger.info(f"Minted {args.amount} tokens to {recipient}. New balance: {new_balance}")
+    
+    return MintResult(
+        success=True,
+        new_balance=new_balance,
+        error=None
+    )
+
+
+@query
+def get_owner() -> text:
+    owner = OwnerHelper.get_owner()
+    return owner if owner else ""
 
 
 @query
