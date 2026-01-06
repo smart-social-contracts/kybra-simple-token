@@ -46,6 +46,21 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/kybra-simple-token:${{ steps.version.outputs.VERSION }}
             ghcr.io/${{ github.repository_owner }}/kybra-simple-token:latest
       
+      - name: Build canister and extract artifacts
+        run: |
+          mkdir -p artifacts
+          docker run --rm \
+            -v "$(pwd)/artifacts:/app/artifacts" \
+            ghcr.io/${{ github.repository_owner }}/kybra-simple-token:${{ steps.version.outputs.VERSION }} bash -c "
+          dfx start --background --clean && \
+          dfx build token_backend && \
+          cp .kybra/token_backend/token_backend.wasm /app/artifacts/ && \
+          cp src/token_backend/token_backend.did /app/artifacts/ && \
+          gzip -k /app/artifacts/token_backend.wasm && \
+          echo 'Version: ${{ steps.version.outputs.VERSION }}' > /app/artifacts/BUILD_INFO.txt && \
+          echo 'Build Date: $(date -u)' >> /app/artifacts/BUILD_INFO.txt && \
+          ls -la /app/artifacts/"
+      
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -53,6 +68,9 @@ jobs:
           name: Release ${{ steps.version.outputs.VERSION }}
           body: |
             ## ICRC-1 Token Release ${{ steps.version.outputs.VERSION }}
+            
+            ### Canister Artifacts
+            Download the `.wasm` and `.did` files below to deploy or integrate this token.
             
             ### Docker Image
             ```
@@ -62,7 +80,13 @@ jobs:
             ### Features
             - ICRC-1 compliant token implementation
             - Kybra Python CDK backend
+            - Owner-only mint function
             - Simple frontend displaying token info
+          files: |
+            artifacts/token_backend.wasm.gz
+            artifacts/token_backend.wasm
+            artifacts/token_backend.did
+            artifacts/BUILD_INFO.txt
           draft: false
           prerelease: false
         env:

@@ -154,3 +154,45 @@ jobs:
           name: deploy-test-logs
           path: deploy-logs/
           retention-days: 7
+
+  build-artifacts:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Build canister and extract artifacts
+        run: |
+          mkdir -p artifacts
+          docker run --rm \
+            -v "$(pwd)/artifacts:/app/artifacts" \
+            ghcr.io/${{ github.repository_owner }}/kybra-simple-token:test-${{ github.sha }} bash -c "
+          dfx start --background --clean && \
+          dfx build token_backend && \
+          cp .kybra/token_backend/token_backend.wasm /app/artifacts/ && \
+          cp src/token_backend/token_backend.did /app/artifacts/ && \
+          echo 'Build SHA: ${{ github.sha }}' > /app/artifacts/BUILD_INFO.txt && \
+          echo 'Build Date: $(date -u)' >> /app/artifacts/BUILD_INFO.txt && \
+          ls -la /app/artifacts/"
+      
+      - name: Upload wasm artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: token_backend.wasm
+          path: artifacts/token_backend.wasm
+          retention-days: 90
+      
+      - name: Upload did artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: token_backend.did
+          path: artifacts/token_backend.did
+          retention-days: 90
+      
+      - name: Upload all artifacts bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: token-canister-artifacts
+          path: artifacts/
+          retention-days: 90
