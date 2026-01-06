@@ -1,1 +1,3 @@
-token/canister_ids.json
+# Local build artifacts (not canister_ids.json - we want persistent IDs)
+token/.dfx/
+token/.kybra/
