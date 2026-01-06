@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Build and push release image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./token
+          target: base
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/kybra-simple-token:${{ steps.version.outputs.VERSION }}
+            ghcr.io/${{ github.repository_owner }}/kybra-simple-token:latest
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          name: Release ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## ICRC-1 Token Release ${{ steps.version.outputs.VERSION }}
+            
+            ### Docker Image
+            ```
+            ghcr.io/${{ github.repository_owner }}/kybra-simple-token:${{ steps.version.outputs.VERSION }}
+            ```
+            
+            ### Features
+            - ICRC-1 compliant token implementation
+            - Kybra Python CDK backend
+            - Simple frontend displaying token info
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

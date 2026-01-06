@@ -1,0 +1,156 @@
+name: CI - Build & Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build and push base image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./token
+          target: base
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/kybra-simple-token:${{ github.sha }}
+          no-cache: true
+          pull: true
+
+      - name: Build and push test image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./token
+          target: test
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/kybra-simple-token:test-${{ github.sha }}
+          pull: true
+      
+      - name: Verify Docker images
+        if: always()
+        run: |
+          mkdir -p build-logs
+          if docker image inspect ghcr.io/${{ github.repository_owner }}/kybra-simple-token:${{ github.sha }} >/dev/null 2>&1; then
+            echo "✅ Base Docker image built successfully"
+          else
+            echo "❌ Base Docker image build failed"
+            echo "Base Docker build failed" > build-logs/build-failed.txt
+          fi
+      
+      - name: Save build metadata
+        if: always()
+        run: |
+          echo "Commit: ${{ github.sha }}" > build-logs/build-info.txt
+          echo "Image: ghcr.io/${{ github.repository_owner }}/kybra-simple-token:${{ github.sha }}" >> build-logs/build-info.txt
+          echo "Branch: ${{ github.ref_name }}" >> build-logs/build-info.txt
+          echo "Timestamp: $(date -u)" >> build-logs/build-info.txt
+      
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: build-logs/
+          retention-days: 7
+
+  test-backend:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Run backend tests
+        run: |
+          mkdir -p test-logs
+          docker run --rm \
+            -v "$(pwd)/test-logs:/app/test-logs" \
+            ghcr.io/${{ github.repository_owner }}/kybra-simple-token:test-${{ github.sha }} \
+            python3 tests/backend/test_token.py 2>&1 | tee test-logs/backend-tests.log
+      
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-logs
+          path: test-logs/
+          retention-days: 7
+
+  linting:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install linting tools
+        run: pip install flake8 black
+      
+      - name: Run flake8
+        run: |
+          mkdir -p lint-logs
+          flake8 token/src/token_backend/src/ --max-line-length=120 --ignore=E501,W503 > lint-logs/flake8.log 2>&1 || true
+      
+      - name: Check black formatting
+        run: |
+          black --check token/src/token_backend/src/ > lint-logs/black.log 2>&1 || true
+      
+      - name: Upload lint logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-logs
+          path: lint-logs/
+          retention-days: 7
+
+  deploy-test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Test canister deployment
+        run: |
+          mkdir -p deploy-logs
+          docker run --rm \
+            -v "$(pwd)/deploy-logs:/app/deploy-logs" \
+            ghcr.io/${{ github.repository_owner }}/kybra-simple-token:test-${{ github.sha }} bash -c "
+          dfx start --background --clean && \
+          dfx deploy token_backend && \
+          dfx canister call token_backend get_token_info && \
+          dfx canister call token_backend icrc1_name && \
+          dfx canister call token_backend icrc1_total_supply; \
+          EXIT_CODE=\$?; \
+          cp -f dfx.log /app/deploy-logs/ 2>/dev/null || true; \
+          exit \$EXIT_CODE" 2>&1 | tee deploy-logs/deploy-test.log
+      
+      - name: Upload deploy logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-test-logs
+          path: deploy-logs/
+          retention-days: 7

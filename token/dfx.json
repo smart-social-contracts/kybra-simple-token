@@ -1,0 +1,59 @@
+{
+  "canisters": {
+    "token_backend": {
+      "build": "python -m kybra token_backend src/token_backend/src/main.py",
+      "candid": "src/token_backend/token_backend.did",
+      "declarations": {
+        "node_compatibility": true
+      },
+      "gzip": true,
+      "tech_stack": {
+        "cdk": {
+          "kybra": {}
+        },
+        "language": {
+          "python": {}
+        }
+      },
+      "type": "custom",
+      "wasm": ".kybra/token_backend/token_backend.wasm",
+      "metadata": [
+        {
+          "name": "candid:service"
+        }
+      ]
+    },
+    "token_frontend": {
+      "dependencies": [
+        "token_backend"
+      ],
+      "source": [
+        "src/token_frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "token_frontend"
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    },
+    "staging": {
+      "providers": ["https://icp0.io"],
+      "type": "persistent"
+    },
+    "ic": {
+      "providers": ["https://icp0.io"],
+      "type": "persistent"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
