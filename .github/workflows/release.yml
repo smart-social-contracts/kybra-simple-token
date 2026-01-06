@@ -1,14 +1,17 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version to release (e.g., v1.0.0)'
+      release_type:
+        description: 'Type of release (patch, minor, major)'
         required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
   release:
@@ -19,6 +22,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
@@ -27,14 +32,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Set version
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install semver
+        run: pip install semver
+      
+      - name: Bump version
         id: version
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          fi
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          ./scripts/bump_version.sh ${{ github.event.inputs.release_type }}
+          
+          NEW_VERSION=$(cat version.txt)
+          echo "VERSION=v${NEW_VERSION}" >> $GITHUB_OUTPUT
       
       - name: Build and push release image
         uses: docker/build-push-action@v4
@@ -52,14 +67,14 @@ jobs:
           docker run --rm \
             -v "$(pwd)/artifacts:/app/artifacts" \
             ghcr.io/${{ github.repository_owner }}/kybra-simple-token:${{ steps.version.outputs.VERSION }} bash -c "
-          dfx start --background --clean && \
-          dfx build token_backend && \
-          cp .kybra/token_backend/token_backend.wasm /app/artifacts/ && \
-          cp src/token_backend/token_backend.did /app/artifacts/ && \
-          gzip -k /app/artifacts/token_backend.wasm && \
-          echo 'Version: ${{ steps.version.outputs.VERSION }}' > /app/artifacts/BUILD_INFO.txt && \
-          echo 'Build Date: $(date -u)' >> /app/artifacts/BUILD_INFO.txt && \
-          ls -la /app/artifacts/"
+          ./scripts/build_canister.sh /app/artifacts && \
+          echo 'Version: ${{ steps.version.outputs.VERSION }}' >> /app/artifacts/BUILD_INFO.txt"
+      
+      - name: Commit and push version changes
+        run: |
+          git add version.txt
+          git commit -m "Bump version to ${{ steps.version.outputs.VERSION }}"
+          git push origin main
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -73,8 +88,14 @@ jobs:
             Download the `.wasm` and `.did` files below to deploy or integrate this token.
             
             ### Docker Image
+            ```bash
+            docker pull ghcr.io/${{ github.repository_owner }}/kybra-simple-token:${{ steps.version.outputs.VERSION }}
             ```
-            ghcr.io/${{ github.repository_owner }}/kybra-simple-token:${{ steps.version.outputs.VERSION }}
+            
+            ### Deploy to IC
+            ```bash
+            # Download artifacts and deploy
+            dfx canister install token_backend --wasm token_backend.wasm --argument '()'
             ```
             
             ### Features
