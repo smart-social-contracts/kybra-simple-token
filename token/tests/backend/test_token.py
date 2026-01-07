@@ -40,6 +40,16 @@ class MockStableBTreeMap(metaclass=SubscriptableMeta):
 class MockRecord:
     pass
 
+class MockVariant:
+    """Mock Variant class for testing"""
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+    
+    def __init_subclass__(cls, **kwargs):
+        # Accept and ignore keyword arguments like total=False
+        pass
+
 # Create mock modules BEFORE any imports
 mock_kybra = ModuleType("kybra")
 mock_ic = MagicMock()
@@ -53,6 +63,7 @@ mock_kybra.Principal = MagicMock
 mock_kybra.Record = MockRecord
 mock_kybra.StableBTreeMap = MockStableBTreeMap
 mock_kybra.Tuple = MockTuple
+mock_kybra.Variant = MockVariant
 mock_kybra.Vec = MockVec
 mock_kybra.blob = bytes
 mock_kybra.init = lambda f: f
@@ -99,32 +110,57 @@ class MockStorage:
 mock_storage = MockStorage()
 
 
-class MockEntity:
+class MockEntityMeta(type):
+    """Metaclass that gives each Entity subclass its own _instances dict"""
+    def __new__(mcs, name, bases, namespace):
+        cls = super().__new__(mcs, name, bases, namespace)
+        cls._instances = {}  # Each class gets its own instances dict
+        return cls
+    
+    def __getitem__(cls, key):
+        return cls._instances.get(key)
+
+
+class MockEntity(metaclass=MockEntityMeta):
     """Mock Entity class for testing"""
-    _instances = {}
     
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
-        key = kwargs.get("id") or kwargs.get("key")
-        if key:
+        key = self._get_key(kwargs)
+        if key is not None:
             self.__class__._instances[key] = self
     
+    @staticmethod
+    def _get_key(data):
+        """Get key from dict, handling falsy values like 0 correctly"""
+        if "id" in data:
+            return data["id"]
+        if "key" in data:
+            return data["key"]
+        return None
+    
+    def _get_instance_key(self):
+        """Get key from instance attributes"""
+        if hasattr(self, "id") and self.id is not None:
+            return self.id
+        if hasattr(self, "key") and self.key is not None:
+            return self.key
+        return None
+    
     def save(self):
-        pass
+        key = self._get_instance_key()
+        if key is not None:
+            self.__class__._instances[key] = self
     
     def delete(self):
-        key = getattr(self, "id", None) or getattr(self, "key", None)
-        if key and key in self.__class__._instances:
+        key = self._get_instance_key()
+        if key is not None and key in self.__class__._instances:
             del self.__class__._instances[key]
     
     @classmethod
-    def __class_getitem__(cls, key):
-        return cls._instances.get(key)
-    
-    @classmethod
     def instances(cls):
-        return cls._instances.values()
+        return list(cls._instances.values())
     
     @classmethod
     def count(cls):
@@ -416,6 +452,384 @@ def test_mint_unauthorized():
         return False
 
 
+# ============================================================
+# INDEXER TESTS
+# ============================================================
+
+def test_transaction_helper_block_index():
+    """Test TransactionHelper block index management"""
+    try:
+        from main import TransactionHelper, TokenConfig
+        
+        # Reset block index
+        config = TokenConfig["next_block_index"]
+        if config:
+            config.delete()
+        TokenConfig._instances.pop("next_block_index", None)
+        
+        # Initial block index should be 0
+        initial = TransactionHelper.get_next_block_index()
+        assert initial == 0, f"Expected 0, got {initial}"
+        
+        # Increment and get should return 0 (current), then next should be 1
+        block0 = TransactionHelper.increment_block_index()
+        assert block0 == 0, f"Expected 0, got {block0}"
+        
+        next_idx = TransactionHelper.get_next_block_index()
+        assert next_idx == 1, f"Expected 1, got {next_idx}"
+        
+        # Increment again
+        block1 = TransactionHelper.increment_block_index()
+        assert block1 == 1, f"Expected 1, got {block1}"
+        
+        block2 = TransactionHelper.increment_block_index()
+        assert block2 == 2, f"Expected 2, got {block2}"
+        
+        print_success("transaction_helper_block_index tests passed")
+        return True
+    except Exception as e:
+        print_failure("transaction_helper_block_index tests failed", str(e))
+        return False
+
+
+def test_transaction_helper_log_transaction():
+    """Test TransactionHelper.log_transaction"""
+    try:
+        from main import TransactionHelper, TransactionLog, TokenConfig
+        
+        # Clear existing transaction logs
+        TransactionLog._instances.clear()
+        
+        # Reset block index
+        TokenConfig._instances.pop("next_block_index", None)
+        
+        # Log a transfer transaction
+        block_idx = TransactionHelper.log_transaction(
+            kind="transfer",
+            from_owner="sender-principal",
+            from_subaccount=None,
+            to_owner="recipient-principal",
+            to_subaccount=None,
+            amount=100000,
+            fee=10000,
+            memo=None,
+        )
+        
+        assert block_idx == 0, f"Expected block_index 0, got {block_idx}"
+        
+        # Verify transaction was logged
+        tx = TransactionLog[0]
+        assert tx is not None, "Transaction log entry not found"
+        assert tx.kind == "transfer", f"Expected 'transfer', got {tx.kind}"
+        assert tx.from_owner == "sender-principal", f"Expected 'sender-principal', got {tx.from_owner}"
+        assert tx.to_owner == "recipient-principal", f"Expected 'recipient-principal', got {tx.to_owner}"
+        assert tx.amount == 100000, f"Expected 100000, got {tx.amount}"
+        assert tx.fee == 10000, f"Expected 10000, got {tx.fee}"
+        
+        # Log a mint transaction
+        block_idx2 = TransactionHelper.log_transaction(
+            kind="mint",
+            from_owner="",
+            from_subaccount=None,
+            to_owner="recipient-principal",
+            to_subaccount=None,
+            amount=500000,
+            fee=0,
+            memo=None,
+        )
+        
+        assert block_idx2 == 1, f"Expected block_index 1, got {block_idx2}"
+        
+        # Verify mint transaction
+        tx2 = TransactionLog[1]
+        assert tx2 is not None, "Mint transaction log entry not found"
+        assert tx2.kind == "mint", f"Expected 'mint', got {tx2.kind}"
+        assert tx2.from_owner == "", f"Expected empty from_owner for mint, got {tx2.from_owner}"
+        assert tx2.to_owner == "recipient-principal"
+        assert tx2.amount == 500000
+        
+        print_success("transaction_helper_log_transaction tests passed")
+        return True
+    except Exception as e:
+        print_failure("transaction_helper_log_transaction tests failed", str(e))
+        return False
+
+
+def test_transaction_helper_get_transactions_for_account():
+    """Test TransactionHelper.get_transactions_for_account"""
+    try:
+        from main import TransactionHelper, TransactionLog, TokenConfig
+        
+        # Clear existing data
+        TransactionLog._instances.clear()
+        TokenConfig._instances.pop("next_block_index", None)
+        
+        # Log several transactions involving different accounts
+        # Transaction 0: alice -> bob
+        TransactionHelper.log_transaction(
+            kind="transfer",
+            from_owner="alice",
+            from_subaccount=None,
+            to_owner="bob",
+            to_subaccount=None,
+            amount=1000,
+            fee=10,
+        )
+        
+        # Transaction 1: bob -> charlie
+        TransactionHelper.log_transaction(
+            kind="transfer",
+            from_owner="bob",
+            from_subaccount=None,
+            to_owner="charlie",
+            to_subaccount=None,
+            amount=500,
+            fee=10,
+        )
+        
+        # Transaction 2: mint -> alice
+        TransactionHelper.log_transaction(
+            kind="mint",
+            from_owner="",
+            from_subaccount=None,
+            to_owner="alice",
+            to_subaccount=None,
+            amount=10000,
+            fee=0,
+        )
+        
+        # Transaction 3: alice -> charlie
+        TransactionHelper.log_transaction(
+            kind="transfer",
+            from_owner="alice",
+            from_subaccount=None,
+            to_owner="charlie",
+            to_subaccount=None,
+            amount=2000,
+            fee=10,
+        )
+        
+        # Get transactions for alice (should have 3: sent to bob, received mint, sent to charlie)
+        alice_txs = TransactionHelper.get_transactions_for_account("alice")
+        assert len(alice_txs) == 3, f"Expected 3 transactions for alice, got {len(alice_txs)}"
+        
+        # Get transactions for bob (should have 2: received from alice, sent to charlie)
+        bob_txs = TransactionHelper.get_transactions_for_account("bob")
+        assert len(bob_txs) == 2, f"Expected 2 transactions for bob, got {len(bob_txs)}"
+        
+        # Get transactions for charlie (should have 2: received from bob, received from alice)
+        charlie_txs = TransactionHelper.get_transactions_for_account("charlie")
+        assert len(charlie_txs) == 2, f"Expected 2 transactions for charlie, got {len(charlie_txs)}"
+        
+        # Verify ordering (newest first)
+        assert alice_txs[0].id > alice_txs[1].id, "Transactions should be ordered newest first"
+        
+        # Test max_results limit
+        limited_txs = TransactionHelper.get_transactions_for_account("alice", max_results=2)
+        assert len(limited_txs) == 2, f"Expected 2 transactions with limit, got {len(limited_txs)}"
+        
+        # Test start parameter (pagination)
+        # Get transactions before id 3 (should exclude tx 3)
+        paginated_txs = TransactionHelper.get_transactions_for_account("alice", start=3)
+        assert len(paginated_txs) == 2, f"Expected 2 transactions before id 3, got {len(paginated_txs)}"
+        assert all(tx.id < 3 for tx in paginated_txs), "All transactions should have id < 3"
+        
+        print_success("transaction_helper_get_transactions_for_account tests passed")
+        return True
+    except Exception as e:
+        print_failure("transaction_helper_get_transactions_for_account tests failed", str(e))
+        return False
+
+
+def test_transaction_log_with_subaccounts():
+    """Test transaction logging with subaccounts"""
+    try:
+        from main import TransactionHelper, TransactionLog, TokenConfig
+        
+        # Clear existing data
+        TransactionLog._instances.clear()
+        TokenConfig._instances.pop("next_block_index", None)
+        
+        # Create subaccount bytes (32 bytes)
+        subaccount1 = bytes([1] + [0] * 31)
+        subaccount2 = bytes([2] + [0] * 31)
+        
+        # Log transaction with subaccounts
+        TransactionHelper.log_transaction(
+            kind="transfer",
+            from_owner="alice",
+            from_subaccount=subaccount1,
+            to_owner="bob",
+            to_subaccount=subaccount2,
+            amount=5000,
+            fee=10,
+        )
+        
+        # Verify subaccounts were stored correctly
+        tx = TransactionLog[0]
+        assert tx.from_subaccount == subaccount1.hex(), f"from_subaccount mismatch"
+        assert tx.to_subaccount == subaccount2.hex(), f"to_subaccount mismatch"
+        
+        # Get transactions for alice with matching subaccount
+        alice_sub1_txs = TransactionHelper.get_transactions_for_account("alice", subaccount=subaccount1)
+        assert len(alice_sub1_txs) == 1, f"Expected 1 transaction for alice:subaccount1, got {len(alice_sub1_txs)}"
+        
+        # Get transactions for alice with different subaccount (should be empty)
+        alice_sub2_txs = TransactionHelper.get_transactions_for_account("alice", subaccount=subaccount2)
+        assert len(alice_sub2_txs) == 0, f"Expected 0 transactions for alice:subaccount2, got {len(alice_sub2_txs)}"
+        
+        # Get transactions for bob with matching subaccount
+        bob_sub2_txs = TransactionHelper.get_transactions_for_account("bob", subaccount=subaccount2)
+        assert len(bob_sub2_txs) == 1, f"Expected 1 transaction for bob:subaccount2, got {len(bob_sub2_txs)}"
+        
+        print_success("transaction_log_with_subaccounts tests passed")
+        return True
+    except Exception as e:
+        print_failure("transaction_log_with_subaccounts tests failed", str(e))
+        return False
+
+
+def test_transaction_log_with_memo():
+    """Test transaction logging with memo"""
+    try:
+        from main import TransactionHelper, TransactionLog, TokenConfig
+        
+        # Clear existing data
+        TransactionLog._instances.clear()
+        TokenConfig._instances.pop("next_block_index", None)
+        
+        # Create memo
+        memo = b"invoice_12345"
+        
+        # Log transaction with memo
+        TransactionHelper.log_transaction(
+            kind="transfer",
+            from_owner="alice",
+            from_subaccount=None,
+            to_owner="bob",
+            to_subaccount=None,
+            amount=1000,
+            fee=10,
+            memo=memo,
+        )
+        
+        # Verify memo was stored correctly
+        tx = TransactionLog[0]
+        assert tx.memo == memo.hex(), f"memo mismatch: expected {memo.hex()}, got {tx.memo}"
+        
+        # Log transaction without memo
+        TransactionHelper.log_transaction(
+            kind="transfer",
+            from_owner="alice",
+            from_subaccount=None,
+            to_owner="charlie",
+            to_subaccount=None,
+            amount=2000,
+            fee=10,
+            memo=None,
+        )
+        
+        tx2 = TransactionLog[1]
+        assert tx2.memo == "", f"Expected empty memo, got {tx2.memo}"
+        
+        print_success("transaction_log_with_memo tests passed")
+        return True
+    except Exception as e:
+        print_failure("transaction_log_with_memo tests failed", str(e))
+        return False
+
+
+def test_indexer_multiple_transactions():
+    """Test indexer with a realistic sequence of transactions"""
+    try:
+        from main import TransactionHelper, TransactionLog, TokenConfig, TokenHelper
+        
+        # Clear existing data
+        TransactionLog._instances.clear()
+        TokenConfig._instances.pop("next_block_index", None)
+        
+        # Simulate a realistic scenario:
+        # 1. Mint tokens to user
+        # 2. User transfers to multiple recipients
+        # 3. Recipients transfer among themselves
+        
+        user = "user-principal"
+        recipient1 = "recipient1-principal"
+        recipient2 = "recipient2-principal"
+        
+        # Mint to user
+        block0 = TransactionHelper.log_transaction(
+            kind="mint",
+            from_owner="",
+            from_subaccount=None,
+            to_owner=user,
+            to_subaccount=None,
+            amount=1_000_000,
+            fee=0,
+        )
+        
+        # User transfers to recipient1
+        block1 = TransactionHelper.log_transaction(
+            kind="transfer",
+            from_owner=user,
+            from_subaccount=None,
+            to_owner=recipient1,
+            to_subaccount=None,
+            amount=100_000,
+            fee=10_000,
+        )
+        
+        # User transfers to recipient2
+        block2 = TransactionHelper.log_transaction(
+            kind="transfer",
+            from_owner=user,
+            from_subaccount=None,
+            to_owner=recipient2,
+            to_subaccount=None,
+            amount=200_000,
+            fee=10_000,
+        )
+        
+        # recipient1 transfers to recipient2
+        block3 = TransactionHelper.log_transaction(
+            kind="transfer",
+            from_owner=recipient1,
+            from_subaccount=None,
+            to_owner=recipient2,
+            to_subaccount=None,
+            amount=50_000,
+            fee=10_000,
+        )
+        
+        # Verify block indices are sequential
+        assert block0 == 0
+        assert block1 == 1
+        assert block2 == 2
+        assert block3 == 3
+        
+        # Verify user has 3 transactions (1 mint received, 2 transfers sent)
+        user_txs = TransactionHelper.get_transactions_for_account(user)
+        assert len(user_txs) == 3, f"Expected 3 txs for user, got {len(user_txs)}"
+        
+        # Verify recipient1 has 2 transactions (1 received, 1 sent)
+        r1_txs = TransactionHelper.get_transactions_for_account(recipient1)
+        assert len(r1_txs) == 2, f"Expected 2 txs for recipient1, got {len(r1_txs)}"
+        
+        # Verify recipient2 has 2 transactions (2 received)
+        r2_txs = TransactionHelper.get_transactions_for_account(recipient2)
+        assert len(r2_txs) == 2, f"Expected 2 txs for recipient2, got {len(r2_txs)}"
+        
+        # Verify total transaction count
+        all_txs = list(TransactionLog.instances())
+        assert len(all_txs) == 4, f"Expected 4 total txs, got {len(all_txs)}"
+        
+        print_success("indexer_multiple_transactions tests passed")
+        return True
+    except Exception as e:
+        print_failure("indexer_multiple_transactions tests failed", str(e))
+        return False
+
+
 def run_tests():
     """Run all tests and report results"""
     print(f"{BOLD}Running Token Backend Tests...{RESET}\n")
@@ -424,6 +838,7 @@ def run_tests():
     failure_count = 0
 
     tests = [
+        # Basic token tests
         test_token_constants,
         test_icrc1_name,
         test_icrc1_symbol,
@@ -436,6 +851,13 @@ def run_tests():
         test_owner_helper,
         test_mint_authorized,
         test_mint_unauthorized,
+        # Indexer tests
+        test_transaction_helper_block_index,
+        test_transaction_helper_log_transaction,
+        test_transaction_helper_get_transactions_for_account,
+        test_transaction_log_with_subaccounts,
+        test_transaction_log_with_memo,
+        test_indexer_multiple_transactions,
     ]
 
     for test in tests:

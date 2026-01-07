@@ -4,6 +4,7 @@ type MintResult = record {
   error : opt text;
   new_balance : opt nat;
   success : bool;
+  block_index : opt nat;
 };
 type TokenMetadataRecord = record {
   fee : nat;
@@ -25,6 +26,58 @@ type TransferResult = record {
   error : opt text;
   success : bool;
 };
+
+// Indexer types for transaction history (ICRC-3 compatible)
+type Spender = record { owner : principal; subaccount : opt blob };
+type IndexerTransfer = record {
+  to : Account;
+  fee : opt nat;
+  from_ : Account;
+  memo : opt vec nat8;
+  created_at_time : opt nat;
+  amount : nat;
+  spender : opt Spender;
+};
+type IndexerMint = record {
+  to : Account;
+  memo : opt vec nat8;
+  created_at_time : opt nat;
+  amount : nat;
+};
+type IndexerBurn = record {
+  from_ : Account;
+  memo : opt vec nat8;
+  created_at_time : opt nat;
+  amount : nat;
+  spender : opt Spender;
+};
+type IndexerTransaction = record {
+  burn : opt IndexerBurn;
+  kind : text;
+  mint : opt IndexerMint;
+  approve : opt nat;
+  timestamp : nat;
+  transfer : opt IndexerTransfer;
+};
+type AccountTransaction = record {
+  id : nat;
+  transaction : IndexerTransaction;
+};
+type GetAccountTransactionsRequest = record {
+  account : Account;
+  start : opt nat;
+  max_results : nat;
+};
+type GetAccountTransactionsResponse = record {
+  balance : nat;
+  transactions : vec AccountTransaction;
+  oldest_tx_id : opt nat;
+};
+type GetTransactionsResult = variant {
+  Ok : GetAccountTransactionsResponse;
+  Err : text;
+};
+
 service : () -> {
   get_my_balance : () -> (nat) query;
   get_my_principal : () -> (text) query;
@@ -41,4 +94,5 @@ service : () -> {
   icrc1_total_supply : () -> (nat) query;
   icrc1_transfer : (TransferArgs) -> (TransferResult);
   mint : (MintArgs) -> (MintResult);
+  get_account_transactions : (GetAccountTransactionsRequest) -> (GetTransactionsResult) query;
 }

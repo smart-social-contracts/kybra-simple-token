@@ -4,6 +4,7 @@ from kybra import (
     Record,
     StableBTreeMap,
     Tuple,
+    Variant,
     Vec,
     blob,
     ic,
@@ -39,9 +40,25 @@ class TokenConfig(Entity):
     value = String()
 
 
+# Database Entity for transaction log (for indexer functionality)
+class TransactionLog(Entity):
+    __alias__ = "id"
+    id = Integer()  # Block index / transaction ID
+    kind = String()  # "transfer", "mint", "burn"
+    timestamp = Integer()  # Nanoseconds since epoch
+    from_owner = String()  # Sender principal (empty for mint)
+    from_subaccount = String()  # Hex-encoded subaccount or empty
+    to_owner = String()  # Recipient principal
+    to_subaccount = String()  # Hex-encoded subaccount or empty
+    amount = Integer()
+    fee = Integer()
+    memo = String()  # Hex-encoded memo or empty
+
+
 # Register entity types
 Database.get_instance().register_entity_type(TokenBalance)
 Database.get_instance().register_entity_type(TokenConfig)
+Database.get_instance().register_entity_type(TransactionLog)
 
 
 # ICRC-1 Types
@@ -77,6 +94,7 @@ class MintResult(Record):
     success: bool
     new_balance: Opt[nat]
     error: Opt[text]
+    block_index: Opt[nat]
 
 
 class TokenMetadataRecord(Record):
@@ -155,6 +173,83 @@ class OwnerHelper:
     @staticmethod
     def is_owner(principal):
         return principal == OwnerHelper.get_owner()
+
+
+class TransactionHelper:
+    @staticmethod
+    def get_next_block_index():
+        config = TokenConfig["next_block_index"]
+        if config and config.value:
+            return int(config.value)
+        return 0
+
+    @staticmethod
+    def increment_block_index():
+        current = TransactionHelper.get_next_block_index()
+        config = TokenConfig["next_block_index"]
+        if config:
+            config.value = str(current + 1)
+            config.save()
+        else:
+            TokenConfig(key="next_block_index", value=str(current + 1))
+        return current
+
+    @staticmethod
+    def log_transaction(
+        kind: str,
+        from_owner: str,
+        from_subaccount: bytes,
+        to_owner: str,
+        to_subaccount: bytes,
+        amount: int,
+        fee: int,
+        memo: bytes = None,
+    ) -> int:
+        """Log a transaction and return its block index."""
+        block_index = TransactionHelper.increment_block_index()
+        timestamp = ic.time()  # Nanoseconds since epoch
+        
+        TransactionLog(
+            id=block_index,
+            kind=kind,
+            timestamp=timestamp,
+            from_owner=from_owner or "",
+            from_subaccount=from_subaccount.hex() if from_subaccount else "",
+            to_owner=to_owner,
+            to_subaccount=to_subaccount.hex() if to_subaccount else "",
+            amount=amount,
+            fee=fee,
+            memo=memo.hex() if memo else "",
+        )
+        
+        logger.info(f"Logged {kind} transaction #{block_index}: {amount} tokens")
+        return block_index
+
+    @staticmethod
+    def get_transactions_for_account(owner: str, subaccount: bytes = None, start: int = None, max_results: int = 20):
+        """Get transactions involving a specific account."""
+        sub_hex = subaccount.hex() if subaccount else ""
+        transactions = []
+        
+        # Get all transactions and filter by account
+        all_txs = list(TransactionLog.instances())
+        
+        # Filter transactions where account is sender or receiver
+        for tx in all_txs:
+            is_sender = tx.from_owner == owner and tx.from_subaccount == sub_hex
+            is_receiver = tx.to_owner == owner and tx.to_subaccount == sub_hex
+            
+            if is_sender or is_receiver:
+                # If start is specified, only include transactions with id < start
+                if start is not None and tx.id >= start:
+                    continue
+                transactions.append(tx)
+        
+        # Sort by id descending (newest first)
+        transactions.sort(key=lambda x: x.id, reverse=True)
+        
+        # Apply max_results limit
+        return transactions[:max_results]
 
 
 @init
@@ -247,11 +342,23 @@ def icrc1_transfer(args: TransferArgs) -> TransferResult:
     current_supply = TokenHelper.get_total_supply()
     TokenHelper.set_total_supply(current_supply - fee)
     
-    logger.info(f"Transfer successful: {args.amount} tokens transferred")
+    # Log the transaction for indexer
+    block_index = TransactionHelper.log_transaction(
+        kind="transfer",
+        from_owner=caller,
+        from_subaccount=args.from_subaccount,
+        to_owner=recipient,
+        to_subaccount=args.to.subaccount,
+        amount=args.amount,
+        fee=fee,
+        memo=args.memo,
+    )
+    
+    logger.info(f"Transfer successful: {args.amount} tokens transferred, block_index={block_index}")
     
     return TransferResult(
         success=True,
-        block_index=1,
+        block_index=block_index,
         error=None
     )
 
@@ -266,7 +373,8 @@ def mint(args: MintArgs) -> MintResult:
         return MintResult(
             success=False,
             new_balance=None,
-            error="Only the token owner can mint tokens"
+            error="Only the token owner can mint tokens",
+            block_index=None
         )
     
     recipient = args.to.owner.to_str()
@@ -278,12 +386,25 @@ def mint(args: MintArgs) -> MintResult:
     current_supply = TokenHelper.get_total_supply()
     TokenHelper.set_total_supply(current_supply + args.amount)
     
-    logger.info(f"Minted {args.amount} tokens to {recipient}. New balance: {new_balance}")
+    # Log the mint transaction for indexer
+    block_index = TransactionHelper.log_transaction(
+        kind="mint",
+        from_owner="",  # No sender for mints
+        from_subaccount=None,
+        to_owner=recipient,
+        to_subaccount=args.to.subaccount,
+        amount=args.amount,
+        fee=0,
+        memo=None,
+    )
+    
+    logger.info(f"Minted {args.amount} tokens to {recipient}. New balance: {new_balance}, block_index={block_index}")
     
     return MintResult(
         success=True,
         new_balance=new_balance,
-        error=None
+        error=None,
+        block_index=block_index
     )
 
 
@@ -312,3 +433,162 @@ def get_my_balance() -> nat:
 @query
 def get_my_principal() -> text:
     return ic.caller().to_str()
+
+
+# ============================================================================
+# ICRC-3 Indexer Types and Methods (for transaction history)
+# ============================================================================
+
+class Spender(Record):
+    owner: Principal
+    subaccount: Opt[blob]
+
+
+class IndexerTransfer(Record):
+    to: Account
+    fee: Opt[nat]
+    from_: Account
+    memo: Opt[Vec[nat8]]
+    created_at_time: Opt[nat]
+    amount: nat
+    spender: Opt[Spender]
+
+
+class IndexerMint(Record):
+    to: Account
+    memo: Opt[Vec[nat8]]
+    created_at_time: Opt[nat]
+    amount: nat
+
+
+class IndexerBurn(Record):
+    from_: Account
+    memo: Opt[Vec[nat8]]
+    created_at_time: Opt[nat]
+    amount: nat
+    spender: Opt[Spender]
+
+
+class IndexerTransaction(Record):
+    burn: Opt[IndexerBurn]
+    kind: text
+    mint: Opt[IndexerMint]
+    approve: Opt[nat]  # Simplified - not implementing approvals
+    timestamp: nat
+    transfer: Opt[IndexerTransfer]
+
+
+class AccountTransaction(Record):
+    id: nat
+    transaction: IndexerTransaction
+
+
+class GetAccountTransactionsRequest(Record):
+    account: Account
+    start: Opt[nat]
+    max_results: nat
+
+
+class GetAccountTransactionsResponse(Record):
+    balance: nat
+    transactions: Vec[AccountTransaction]
+    oldest_tx_id: Opt[nat]
+
+
+class GetTransactionsResult(Variant, total=False):
+    Ok: GetAccountTransactionsResponse
+    Err: text
+
+
+@query
+def get_account_transactions(request: GetAccountTransactionsRequest) -> GetTransactionsResult:
+    """
+    ICRC-3 compatible method to get transaction history for an account.
+    This is the indexer interface that the vault extension expects.
+    """
+    owner_str = request.account.owner.to_str()
+    subaccount = request.account.subaccount
+    start = request.start
+    max_results = request.max_results if request.max_results else 20
+    
+    logger.info(f"get_account_transactions: owner={owner_str}, start={start}, max_results={max_results}")
+    
+    # Get transactions for this account
+    txs = TransactionHelper.get_transactions_for_account(
+        owner=owner_str,
+        subaccount=subaccount,
+        start=start,
+        max_results=max_results,
+    )
+    
+    # Convert to AccountTransaction format
+    account_transactions = []
+    oldest_tx_id = None
+    
+    for tx in txs:
+        # Track oldest transaction ID
+        if oldest_tx_id is None or tx.id < oldest_tx_id:
+            oldest_tx_id = tx.id
+        
+        # Build the transaction record based on kind
+        if tx.kind == "transfer":
+            from_subaccount = bytes.fromhex(tx.from_subaccount) if tx.from_subaccount else None
+            to_subaccount = bytes.fromhex(tx.to_subaccount) if tx.to_subaccount else None
+            
+            transfer_record = IndexerTransfer(
+                to=Account(owner=Principal.from_str(tx.to_owner), subaccount=to_subaccount),
+                fee=tx.fee if tx.fee else None,
+                from_=Account(owner=Principal.from_str(tx.from_owner), subaccount=from_subaccount),
+                memo=None,
+                created_at_time=tx.timestamp,
+                amount=tx.amount,
+                spender=None,
+            )
+            
+            indexer_tx = IndexerTransaction(
+                burn=None,
+                kind="transfer",
+                mint=None,
+                approve=None,
+                timestamp=tx.timestamp,
+                transfer=transfer_record,
+            )
+        elif tx.kind == "mint":
+            to_subaccount = bytes.fromhex(tx.to_subaccount) if tx.to_subaccount else None
+            
+            mint_record = IndexerMint(
+                to=Account(owner=Principal.from_str(tx.to_owner), subaccount=to_subaccount),
+                memo=None,
+                created_at_time=tx.timestamp,
+                amount=tx.amount,
+            )
+            
+            indexer_tx = IndexerTransaction(
+                burn=None,
+                kind="mint",
+                mint=mint_record,
+                approve=None,
+                timestamp=tx.timestamp,
+                transfer=None,
+            )
+        else:
+            # Unknown transaction type, skip
+            continue
+        
+        account_transactions.append(AccountTransaction(
+            id=tx.id,
+            transaction=indexer_tx,
+        ))
+    
+    # Get current balance
+    balance = TokenHelper.get_balance(owner_str, subaccount)
+    
+    response = GetAccountTransactionsResponse(
+        balance=balance,
+        transactions=account_transactions,
+        oldest_tx_id=oldest_tx_id,
+    )
+    
+    logger.info(f"Returning {len(account_transactions)} transactions, balance={balance}")
+    
+    return GetTransactionsResult(Ok=response)
