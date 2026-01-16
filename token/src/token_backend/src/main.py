@@ -114,6 +114,17 @@ class InitArgs(Record):
     test: Opt[bool]
 
 
+class HolderInfo(Record):
+    address: text
+    balance: nat
+
+
+class TokenDistribution(Record):
+    holders: Vec["HolderInfo"]
+    total_supply: nat
+    holder_count: nat
+
+
 # Token configuration
 TOKEN_NAME = "Simple Token"
 TOKEN_SYMBOL = "SMPL"
@@ -451,6 +462,28 @@ def get_my_principal() -> text:
 def is_test_mode() -> bool:
     config = TokenConfig["test"]
     return config is not None and config.value == "true"
+
+
+@query
+def get_token_distribution() -> TokenDistribution:
+    """Get all token holders and their balances for distribution visualization."""
+    holders = []
+    
+    for balance in TokenBalance.instances():
+        if balance.amount and balance.amount > 0:
+            holders.append(HolderInfo(
+                address=balance.id,
+                balance=balance.amount
+            ))
+    
+    # Sort by balance descending
+    holders.sort(key=lambda h: h["balance"], reverse=True)
+    
+    return TokenDistribution(
+        holders=holders,
+        total_supply=TokenHelper.get_total_supply(),
+        holder_count=len(holders)
+    )
 
 
 # ============================================================================

@@ -86,6 +86,39 @@ main {
   display: none;
 }
 
+.distribution-section {
+  margin-top: 30px;
+  padding-top: 30px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.distribution-section h2 {
+  margin: 0 0 16px 0;
+  font-size: 1.3rem;
+  color: #60a5fa;
+}
+
+.distribution-stats {
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.holder-count {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.chart-container {
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.no-holders {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 20px;
+}
+
 .mint-section {
   margin-top: 30px;
   padding-top: 30px;
