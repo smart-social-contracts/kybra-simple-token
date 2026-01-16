@@ -266,12 +266,12 @@ def init_(args: InitArgs) -> void:
     logger.info("Initializing token canister")
     deployer = ic.caller().to_str()
     OwnerHelper.set_owner(deployer)
-    TokenHelper.set_balance(deployer, args.total_supply)
-    TokenHelper.set_total_supply(args.total_supply)
-    if args.test:
+    TokenHelper.set_balance(deployer, args["total_supply"])
+    TokenHelper.set_total_supply(args["total_supply"])
+    if args.get("test"):
         TokenConfig(key="test", value="true")
         logger.info(f"Test mode enabled - public minting allowed")
-    logger.info(f"Token initialized. Supply: {args.total_supply} to {deployer}")
+    logger.info(f"Token initialized. Supply: {args['total_supply']} to {deployer}")
 
 
 @query
