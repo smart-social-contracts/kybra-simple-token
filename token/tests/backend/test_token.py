@@ -830,6 +830,110 @@ def test_indexer_multiple_transactions():
         return False
 
 
+# ============================================================
+# TEST MODE TESTS
+# ============================================================
+
+def test_test_mode_config():
+    """Test that test mode config can be set and checked"""
+    try:
+        from main import TokenConfig
+        
+        # Clear test config
+        TokenConfig._instances.pop("test", None)
+        
+        # Initially test mode should not be set
+        config = TokenConfig["test"]
+        assert config is None or config.value != "true", "Test mode should not be enabled initially"
+        
+        # Set test mode
+        TokenConfig(key="test", value="true")
+        
+        # Verify test mode is enabled
+        config = TokenConfig["test"]
+        assert config is not None, "Test config should exist"
+        assert config.value == "true", f"Expected 'true', got {config.value}"
+        
+        # Clean up
+        TokenConfig._instances.pop("test", None)
+        
+        print_success("test_mode_config tests passed")
+        return True
+    except Exception as e:
+        print_failure("test_mode_config tests failed", str(e))
+        return False
+
+
+def test_mint_allowed_in_test_mode():
+    """Test that non-owner can mint when test mode is enabled"""
+    try:
+        from main import TokenConfig, OwnerHelper, TokenHelper
+        
+        # Set owner to a different principal (not the mock caller 'aaaaa-aa')
+        OwnerHelper.set_owner("real-owner-principal")
+        
+        # Enable test mode
+        TokenConfig._instances.pop("test", None)
+        TokenConfig(key="test", value="true")
+        
+        # Verify test mode check works
+        test_mode = TokenConfig["test"] and TokenConfig["test"].value == "true"
+        assert test_mode == True, "Test mode should be enabled"
+        
+        # In test mode, even non-owner should be allowed to mint
+        # We can't directly test the mint function (needs ic.caller()),
+        # but we verify the condition logic
+        caller = "non-owner-caller"
+        is_owner = OwnerHelper.is_owner(caller)
+        assert is_owner == False, "Caller should not be owner"
+        
+        # The mint check: not owner AND not test_mode -> deny
+        # With test_mode=True, this should NOT deny
+        should_deny = not is_owner and not test_mode
+        assert should_deny == False, "Should NOT deny mint in test mode"
+        
+        # Clean up
+        TokenConfig._instances.pop("test", None)
+        
+        print_success("mint_allowed_in_test_mode tests passed")
+        return True
+    except Exception as e:
+        print_failure("mint_allowed_in_test_mode tests failed", str(e))
+        return False
+
+
+def test_mint_denied_without_test_mode():
+    """Test that non-owner cannot mint when test mode is disabled"""
+    try:
+        from main import TokenConfig, OwnerHelper
+        
+        # Set owner to a different principal
+        OwnerHelper.set_owner("real-owner-principal")
+        
+        # Ensure test mode is disabled by setting it to "false"
+        TokenConfig._instances.pop("test", None)
+        TokenConfig(key="test", value="false")
+        
+        # Verify test mode is disabled
+        test_mode = TokenConfig["test"] and TokenConfig["test"].value == "true"
+        assert test_mode == False, "Test mode should be disabled"
+        
+        # Non-owner should be denied
+        caller = "non-owner-caller"
+        is_owner = OwnerHelper.is_owner(caller)
+        assert is_owner == False, "Caller should not be owner"
+        
+        # The mint check: not owner AND not test_mode -> deny
+        should_deny = not is_owner and not test_mode
+        assert should_deny == True, "Should deny mint without test mode"
+        
+        print_success("mint_denied_without_test_mode tests passed")
+        return True
+    except Exception as e:
+        print_failure("mint_denied_without_test_mode tests failed", str(e))
+        return False
+
+
 def run_tests():
     """Run all tests and report results"""
     print(f"{BOLD}Running Token Backend Tests...{RESET}\n")
@@ -851,6 +955,10 @@ def run_tests():
         test_owner_helper,
         test_mint_authorized,
         test_mint_unauthorized,
+        # Test mode tests
+        test_test_mode_config,
+        test_mint_allowed_in_test_mode,
+        test_mint_denied_without_test_mode,
         # Indexer tests
         test_transaction_helper_block_index,
         test_transaction_helper_log_transaction,

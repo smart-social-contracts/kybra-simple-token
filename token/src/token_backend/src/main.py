@@ -105,6 +105,15 @@ class TokenMetadataRecord(Record):
     total_supply: nat
 
 
+class InitArgs(Record):
+    name: text
+    symbol: text
+    decimals: nat8
+    total_supply: nat
+    fee: nat
+    test: Opt[bool]
+
+
 # Token configuration
 TOKEN_NAME = "Simple Token"
 TOKEN_SYMBOL = "SMPL"
@@ -253,14 +262,16 @@ class TransactionHelper:
 
 
 @init
-def init_() -> void:
+def init_(args: InitArgs) -> void:
     logger.info("Initializing token canister")
-    initial_supply = 1_000_000_000 * (10 ** TOKEN_DECIMALS)
     deployer = ic.caller().to_str()
     OwnerHelper.set_owner(deployer)
-    TokenHelper.set_balance(deployer, initial_supply)
-    TokenHelper.set_total_supply(initial_supply)
-    logger.info(f"Token initialized. Initial supply: {initial_supply} to {deployer}")
+    TokenHelper.set_balance(deployer, args.total_supply)
+    TokenHelper.set_total_supply(args.total_supply)
+    if args.test:
+        TokenConfig(key="test", value="true")
+        logger.info(f"Test mode enabled - public minting allowed")
+    logger.info(f"Token initialized. Supply: {args.total_supply} to {deployer}")
 
 
 @query
@@ -368,7 +379,8 @@ def mint(args: MintArgs) -> MintResult:
     caller = ic.caller().to_str()
     logger.info(f"Mint request from {caller}: {args.amount} to {args.to.owner.to_str()}")
     
-    if not OwnerHelper.is_owner(caller):
+    test_mode = TokenConfig["test"] and TokenConfig["test"].value == "true"
+    if not OwnerHelper.is_owner(caller) and not test_mode:
         logger.warning(f"Unauthorized mint attempt by {caller}")
         return MintResult(
             success=False,

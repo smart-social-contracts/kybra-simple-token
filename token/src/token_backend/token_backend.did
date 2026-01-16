@@ -58,6 +58,14 @@ type TokenMetadataRecord = record {
   total_supply : nat;
   symbol : text;
 };
+type InitArgs = record {
+  name : text;
+  symbol : text;
+  decimals : nat8;
+  total_supply : nat;
+  fee : nat;
+  test : opt bool;
+};
 type TransferArgs = record {
   to : Account;
   fee : opt nat;
@@ -71,7 +79,7 @@ type TransferResult = record {
   error : opt text;
   success : bool;
 };
-service : () -> {
+service : (InitArgs) -> {
   get_account_transactions : (GetAccountTransactionsRequest) -> (
       GetTransactionsResult,
     ) query;
