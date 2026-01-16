@@ -97,5 +97,6 @@ service : (InitArgs) -> {
   icrc1_symbol : () -> (text) query;
   icrc1_total_supply : () -> (nat) query;
   icrc1_transfer : (TransferArgs) -> (TransferResult);
+  is_test_mode : () -> (bool) query;
   mint : (MintArgs) -> (MintResult);
 }

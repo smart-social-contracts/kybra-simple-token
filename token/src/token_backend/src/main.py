@@ -447,6 +447,12 @@ def get_my_principal() -> text:
     return ic.caller().to_str()
 
 
+@query
+def is_test_mode() -> bool:
+    config = TokenConfig["test"]
+    return config is not None and config.value == "true"
+
+
 # ============================================================================
 # ICRC-3 Indexer Types and Methods (for transaction history)
 # ============================================================================
