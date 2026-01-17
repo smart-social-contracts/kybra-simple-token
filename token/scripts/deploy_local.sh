@@ -30,10 +30,10 @@ sleep 2
 
 # Deploy canisters (init_arg is in dfx.json)
 echo "Deploying token_backend..."
-dfx deploy token_backend --network staging --mode reinstall --argument '(record { name = "Simple Token"; symbol = "SMPL"; decimals = 8 : nat8; total_supply = 100_000_000_000_000_000 : nat; fee = 10_000 : nat; test = opt true })' --yes
+dfx deploy token_backend --mode reinstall --argument '(record { name = "Simple Token"; symbol = "SMPL"; decimals = 8 : nat8; total_supply = 100_000_000_000_000_000 : nat; fee = 10_000 : nat; test = opt true })' --yes
 
 echo "Deploying token_frontend..."
- dfx deploy token_frontend --network staging --mode reinstall --yes
+dfx deploy token_frontend --mode reinstall --yes
 
 # Run basic tests
 echo ""
