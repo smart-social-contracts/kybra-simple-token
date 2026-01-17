@@ -60,7 +60,9 @@ cd src/token_frontend && npm install && cd ../..
 # --yes auto-confirms Candid interface changes for CI
 if [ "$REINSTALL_MODE" = true ]; then
     echo "Deploying canisters to staging (REINSTALL mode)..."
-    dfx deploy --network staging --no-wallet --yes --mode reinstall
+    # Must deploy each canister separately when using --mode reinstall
+    dfx deploy token_backend --network staging --no-wallet --yes --mode reinstall
+    dfx deploy token_frontend --network staging --no-wallet --yes --mode reinstall
 else
     echo "Deploying canisters to staging (upgrade only)..."
     dfx deploy --network staging --no-wallet --yes
