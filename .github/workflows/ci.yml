@@ -11,48 +11,27 @@ env:
   ICP_DEV_IMAGE: ghcr.io/smart-social-contracts/icp-dev-env:db60540
 
 jobs:
-  test:
+  ci:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
       
-      - name: Run backend tests
+      - name: Run CI (lint, test, deploy-test)
         run: |
           docker run --rm \
             -v "$(pwd):/workspace" \
             -w /workspace \
             ${{ env.ICP_DEV_IMAGE }} bash -c "
-          cd token && \
-          python tests/backend/test_token.py"
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-      
-      - name: Install linting tools
-        run: pip install flake8 black isort
-      
-      - name: Run linters
-        run: ./token/scripts/run_linters.sh
-
-  deploy-test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Test local deployment
-        run: |
-          docker run --rm \
-            -v "$(pwd):/workspace" \
-            -w /workspace \
-            ${{ env.ICP_DEV_IMAGE }} bash -c "
-          ./token/scripts/deploy_local.sh --clean"
+          set -e
+          echo '=== Linting ==='
+          pip install -q flake8 black isort
+          ./token/scripts/run_linters.sh
+          
+          echo '=== Backend Tests ==='
+          cd token && python tests/backend/test_token.py && cd ..
+          
+          echo '=== Deploy Test ==='
+          ./token/scripts/deploy_local.sh --clean
+          
+          echo '=== All CI checks passed! ==='"
