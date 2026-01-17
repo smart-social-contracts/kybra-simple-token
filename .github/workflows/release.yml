@@ -13,26 +13,19 @@ on:
           - minor
           - major
 
+env:
+  ICP_DEV_IMAGE: ghcr.io/smart-social-contracts/icp-dev-env:db60540
+
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: write
-    outputs:
-      version: ${{ steps.version.outputs.VERSION }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -47,32 +40,21 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          
           ./token/scripts/bump_version.sh ${{ github.event.inputs.release_type }}
-          
           NEW_VERSION=$(cat version.txt)
           echo "VERSION=v${NEW_VERSION}" >> $GITHUB_OUTPUT
       
-      - name: Build and push release image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./token
-          target: base
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/kybra-simple-token:${{ steps.version.outputs.VERSION }}
-            ghcr.io/${{ github.repository_owner }}/kybra-simple-token:latest
-      
-      - name: Build canister and extract artifacts
+      - name: Build artifacts
         run: |
           mkdir -p artifacts
           docker run --rm \
-            -v "$(pwd)/artifacts:/app/artifacts" \
-            ghcr.io/${{ github.repository_owner }}/kybra-simple-token:${{ steps.version.outputs.VERSION }} bash -c "
-          ./scripts/build_canister.sh /app/artifacts && \
-          echo 'Version: ${{ steps.version.outputs.VERSION }}' >> /app/artifacts/BUILD_INFO.txt"
+            -v "$(pwd):/workspace" \
+            -w /workspace \
+            ${{ env.ICP_DEV_IMAGE }} bash -c "
+          ./scripts/build_canister.sh /workspace/artifacts"
+          echo "Version: ${{ steps.version.outputs.VERSION }}" >> artifacts/BUILD_INFO.txt
       
-      - name: Commit and push version changes
+      - name: Commit and push version
         run: |
           git add version.txt
           git commit -m "Bump version to ${{ steps.version.outputs.VERSION }}"
@@ -86,34 +68,14 @@ jobs:
           body: |
             ## ICRC-1 Token Release ${{ steps.version.outputs.VERSION }}
             
-            ### Canister Artifacts
-            Download the `.wasm` and `.did` files below to deploy or integrate this token.
-            
-            ### Docker Image
-            ```bash
-            docker pull ghcr.io/${{ github.repository_owner }}/kybra-simple-token:${{ steps.version.outputs.VERSION }}
-            ```
-            
-            ### Deploy to IC
-            ```bash
-            # Download artifacts and deploy
-            dfx canister install token_backend --wasm token_backend.wasm --argument '()'
-            ```
+            ### Artifacts
+            - `token_backend.wasm` - Backend canister
+            - `token_frontend.wasm` - Frontend canister
             
             ### Features
             - ICRC-1 compliant token implementation
             - Kybra Python CDK backend
-            - Mint function (owner-only, or public in test mode)
-            - SvelteKit frontend with:
-              - Token info display
-              - Token distribution pie chart
-              - Mint UI (when test mode enabled)
-            
-            ### Artifacts
-            - `token_backend.wasm` / `token_backend.wasm.gz` - Backend canister
-            - `token_backend.did` - Backend Candid interface
-            - `token_frontend.wasm` / `token_frontend.wasm.gz` - Frontend assets canister
-            - `token_frontend.did` - Frontend Candid interface
+            - SvelteKit frontend with token info, distribution chart, and mint UI
           files: |
             artifacts/token_backend.wasm.gz
             artifacts/token_backend.wasm
