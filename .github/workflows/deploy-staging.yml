@@ -42,5 +42,8 @@ jobs:
             -v "$HOME/.config/dfx:/root/.config/dfx" \
             -w /workspace \
             ${{ env.ICP_DEV_IMAGE }} bash -c "
-          dfx identity use ci && \
-          ./token/scripts/deploy_staging.sh $REINSTALL_ARG"
+          set -e
+          dfxvm default 0.29.0
+          dfx identity use ci
+          cd token
+          ./scripts/deploy_staging.sh $REINSTALL_ARG"
