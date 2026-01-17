@@ -211,6 +211,7 @@ jobs:
         env:
           IC_IDENTITY_PEM: ${{ secrets.IC_IDENTITY_PEM }}
         run: |
+          set -o pipefail
           mkdir -p deploy-staging-logs
           
           # Setup identity from secret
