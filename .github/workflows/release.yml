@@ -50,14 +50,15 @@ jobs:
           docker run --rm \
             -v "$(pwd):/workspace" \
             -w /workspace \
-            ${{ env.ICP_DEV_IMAGE }} bash -c "
+            -e VERSION="${{ steps.version.outputs.VERSION }}" \
+            ${{ env.ICP_DEV_IMAGE }} bash -c '
           set -e
           dfxvm default 0.29.0
           cd token
           pip install -q -r requirements.txt
           cd src/token_frontend && npm install && cd ../..
-          ./scripts/build_canister.sh /workspace/artifacts"
-          echo "Version: ${{ steps.version.outputs.VERSION }}" >> artifacts/BUILD_INFO.txt
+          ./scripts/build_canister.sh /workspace/artifacts
+          echo "Version: $VERSION" >> /workspace/artifacts/BUILD_INFO.txt'
       
       - name: Commit and push version
         run: |
