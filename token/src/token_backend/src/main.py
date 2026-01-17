@@ -152,7 +152,6 @@ class TokenHelper:
         balance = TokenBalance[key]
         if balance:
             balance.amount = balance_amount
-            balance.save()
         else:
             TokenBalance(id=key, amount=balance_amount)
 
@@ -168,7 +167,6 @@ class TokenHelper:
         config = TokenConfig["total_supply"]
         if config:
             config.value = str(supply)
-            config.save()
         else:
             TokenConfig(key="total_supply", value=str(supply))
 
@@ -186,7 +184,6 @@ class OwnerHelper:
         config = TokenConfig["owner"]
         if config:
             config.value = owner
-            config.save()
         else:
             TokenConfig(key="owner", value=owner)
 
@@ -209,7 +206,6 @@ class TransactionHelper:
         config = TokenConfig["next_block_index"]
         if config:
             config.value = str(current + 1)
-            config.save()
         else:
             TokenConfig(key="next_block_index", value=str(current + 1))
         return current
@@ -388,7 +384,7 @@ def icrc1_transfer(args: TransferArgs) -> TransferResult:
 @update
 def mint(args: MintArgs) -> MintResult:
     caller = ic.caller().to_str()
-    logger.info(f"Mint request from {caller}: {args.amount} to {args.to.owner.to_str()}")
+    logger.info(f"Mint request from {caller}: {args['amount']} to {args['to']['owner'].to_str()}")
     
     test_mode = TokenConfig["test"] and TokenConfig["test"].value == "true"
     if not OwnerHelper.is_owner(caller) and not test_mode:
@@ -400,14 +396,14 @@ def mint(args: MintArgs) -> MintResult:
             block_index=None
         )
     
-    recipient = args.to.owner.to_str()
-    current_balance = TokenHelper.get_balance(recipient, args.to.subaccount)
-    new_balance = current_balance + args.amount
+    recipient = args["to"]["owner"].to_str()
+    current_balance = TokenHelper.get_balance(recipient, args["to"].get("subaccount"))
+    new_balance = current_balance + args["amount"]
     
-    TokenHelper.set_balance(recipient, new_balance, args.to.subaccount)
+    TokenHelper.set_balance(recipient, new_balance, args["to"].get("subaccount"))
     
     current_supply = TokenHelper.get_total_supply()
-    TokenHelper.set_total_supply(current_supply + args.amount)
+    TokenHelper.set_total_supply(current_supply + args["amount"])
     
     # Log the mint transaction for indexer
     block_index = TransactionHelper.log_transaction(
@@ -415,13 +411,13 @@ def mint(args: MintArgs) -> MintResult:
         from_owner="",  # No sender for mints
         from_subaccount=None,
         to_owner=recipient,
-        to_subaccount=args.to.subaccount,
-        amount=args.amount,
+        to_subaccount=args["to"].get("subaccount"),
+        amount=args["amount"],
         fee=0,
         memo=None,
     )
     
-    logger.info(f"Minted {args.amount} tokens to {recipient}. New balance: {new_balance}, block_index={block_index}")
+    logger.info(f"Minted {args['amount']} tokens to {recipient}. New balance: {new_balance}, block_index={block_index}")
     
     return MintResult(
         success=True,

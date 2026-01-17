@@ -28,9 +28,12 @@ fi
 
 sleep 2
 
-# Deploy
+# Deploy canisters (init_arg is in dfx.json)
 echo "Deploying token_backend..."
 dfx deploy token_backend
+
+echo "Deploying token_frontend..."
+dfx deploy token_frontend
 
 # Run basic tests
 echo ""

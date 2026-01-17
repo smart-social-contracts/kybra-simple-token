@@ -2,6 +2,17 @@
 
 An ICRC-1 token implementation in Kybra using `kybra`, `kybra-simple-db`, and `kybra_simple_logging`.
 
+## Features
+
+- **ICRC-1 Compliant** - Full ICRC-1 token standard implementation
+- **Kybra Python Backend** - Built with Kybra CDK for the Internet Computer
+- **SvelteKit Frontend** - Modern web interface with:
+  - Token information display
+  - Token distribution pie chart visualization
+  - Mint tokens UI (when test mode is enabled)
+- **Test Mode** - Optional public minting for testing purposes
+- **Transaction Indexer** - Built-in transaction history tracking
+
 ## Prerequisites
 
 - Python 3.10 or 3.11
@@ -98,11 +109,16 @@ dfx canister call token_backend icrc1_balance_of '(record {
 })'
 ```
 
-## Mint Tokens (Owner Only)
+## Mint Tokens
 
-Only the token owner (deployer) can mint new tokens:
+Minting is controlled by the `test` flag during initialization:
+- **Test Mode (`test = opt true`)**: Anyone can mint tokens (for testing)
+- **Production Mode (`test = opt false` or not set)**: Only the owner can mint
 
 ```bash
+# Check if test mode is enabled
+dfx canister call token_backend is_test_mode
+
 # Get the token owner
 dfx canister call token_backend get_owner
 
@@ -130,6 +146,15 @@ dfx canister call token_backend mint '(record {
 
 # Verify the new total supply
 dfx canister call token_backend icrc1_total_supply
+```
+
+## Token Distribution
+
+Query the token distribution across all holders:
+
+```bash
+# Get all holders and their balances
+dfx canister call token_backend get_token_distribution
 ```
 
 ## Token Configuration

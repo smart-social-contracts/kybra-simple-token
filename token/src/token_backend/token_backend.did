@@ -14,6 +14,7 @@ type GetTransactionsResult = variant {
   Ok : GetAccountTransactionsResponse;
   Err : text;
 };
+type HolderInfo = record { balance : nat; address : text };
 type IndexerBurn = record {
   from : Account;
   memo : opt blob;
@@ -44,6 +45,14 @@ type IndexerTransfer = record {
   amount : nat;
   spender : opt Account;
 };
+type InitArgs = record {
+  fee : nat;
+  decimals : nat8;
+  name : text;
+  test : opt bool;
+  total_supply : nat;
+  symbol : text;
+};
 type MintArgs = record { to : Account; amount : nat };
 type MintResult = record {
   block_index : opt nat;
@@ -51,20 +60,17 @@ type MintResult = record {
   new_balance : opt nat;
   success : bool;
 };
+type TokenDistribution = record {
+  holder_count : nat;
+  holders : vec HolderInfo;
+  total_supply : nat;
+};
 type TokenMetadataRecord = record {
   fee : nat;
   decimals : nat8;
   name : text;
   total_supply : nat;
   symbol : text;
-};
-type InitArgs = record {
-  name : text;
-  symbol : text;
-  decimals : nat8;
-  total_supply : nat;
-  fee : nat;
-  test : opt bool;
 };
 type TransferArgs = record {
   to : Account;
@@ -78,15 +84,6 @@ type TransferResult = record {
   block_index : opt nat;
   error : opt text;
   success : bool;
-};
-type HolderInfo = record {
-  address : text;
-  balance : nat;
-};
-type TokenDistribution = record {
-  holders : vec HolderInfo;
-  total_supply : nat;
-  holder_count : nat;
 };
 service : (InitArgs) -> {
   get_account_transactions : (GetAccountTransactionsRequest) -> (

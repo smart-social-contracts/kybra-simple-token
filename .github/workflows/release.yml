@@ -103,8 +103,17 @@ jobs:
             ### Features
             - ICRC-1 compliant token implementation
             - Kybra Python CDK backend
-            - Owner-only mint function
-            - Simple frontend displaying token info
+            - Mint function (owner-only, or public in test mode)
+            - SvelteKit frontend with:
+              - Token info display
+              - Token distribution pie chart
+              - Mint UI (when test mode enabled)
+            
+            ### Artifacts
+            - `token_backend.wasm` / `token_backend.wasm.gz` - Backend canister
+            - `token_backend.did` - Backend Candid interface
+            - `token_frontend.wasm` / `token_frontend.wasm.gz` - Frontend assets canister
+            - `token_frontend.did` - Frontend Candid interface
           files: |
             artifacts/token_backend.wasm.gz
             artifacts/token_backend.wasm

@@ -29,8 +29,8 @@
   let chart = null;
 
   const CHART_COLORS = [
-    "#4ade80", "#60a5fa", "#f472b6", "#fbbf24", "#a78bfa",
-    "#34d399", "#fb7185", "#38bdf8", "#facc15", "#c084fc",
+    "#171717", "#404040", "#525252", "#737373", "#A3A3A3",
+    "#262626", "#6B7280", "#4B5563", "#374151", "#1F2937",
   ];
 
   function formatSupply(supply, dec) {
@@ -108,7 +108,7 @@
               {
                 data: chartData.map((d) => d.balance),
                 backgroundColor: CHART_COLORS.slice(0, chartData.length),
-                borderColor: "rgba(26, 26, 46, 0.8)",
+                borderColor: "#FFFFFF",
                 borderWidth: 2,
               },
             ],
@@ -120,7 +120,7 @@
               legend: {
                 position: "bottom",
                 labels: {
-                  color: "rgba(255, 255, 255, 0.8)",
+                  color: "#525252",
                   padding: 12,
                   font: { size: 11 },
                   boxWidth: 12,
