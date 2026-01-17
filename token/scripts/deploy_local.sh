@@ -32,6 +32,10 @@ sleep 2
 echo "Installing Python dependencies..."
 pip install -q -r requirements.txt
 
+# Install frontend dependencies
+echo "Installing frontend dependencies..."
+cd src/token_frontend && npm install && cd ../..
+
 # Deploy canisters (init_arg is in dfx.json)
 echo "Deploying token_backend..."
 dfx deploy token_backend --mode reinstall --argument '(record { name = "Simple Token"; symbol = "SMPL"; decimals = 8 : nat8; total_supply = 100_000_000_000_000_000 : nat; fee = 10_000 : nat; test = opt true })' --yes
