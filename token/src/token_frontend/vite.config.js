@@ -7,7 +7,13 @@ import { execSync } from 'child_process';
 
 dotenv.config({ path: '../../.env' });
 
-const commitHash = execSync('git rev-parse --short HEAD').toString().trim();
+let commitHash = 'unknown';
+try {
+  commitHash = execSync('git rev-parse --short HEAD').toString().trim();
+} catch (e) {
+  // Git command may fail in Docker or CI environments
+  console.warn('Could not get git commit hash:', e.message);
+}
 const buildTime = new Date().toISOString();
 const version = process.env.npm_package_version || '0.1.0';
 
