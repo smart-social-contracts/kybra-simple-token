@@ -20,11 +20,7 @@
   function formatTimestamp(nanos) {
     const ms = Number(nanos) / 1_000_000;
     const date = new Date(ms);
-    return {
-      date: date.toLocaleDateString(),
-      time: date.toLocaleTimeString(),
-      full: date.toISOString(),
-    };
+    return date.toISOString();
   }
 
   function getKindBadgeClass(kind) {
@@ -76,7 +72,6 @@
     {:else if error}
       <div class="error">{error}</div>
     {:else if transaction}
-      {@const time = formatTimestamp(transaction.timestamp)}
       <div class="detail-card">
         <div class="detail-row header-row">
           <span class="label">Transaction ID</span>
@@ -103,13 +98,8 @@
         {/if}
 
         <div class="detail-row">
-          <span class="label">Date</span>
-          <span class="value">{time.date}</span>
-        </div>
-
-        <div class="detail-row">
-          <span class="label">Time</span>
-          <span class="value">{time.time}</span>
+          <span class="label">Datetime</span>
+          <span class="value mono">{formatTimestamp(transaction.timestamp)}</span>
         </div>
 
         <div class="section-divider"></div>
