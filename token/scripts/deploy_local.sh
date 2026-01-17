@@ -19,13 +19,11 @@ if [ "$CLEAN" = true ]; then
     echo "Starting dfx with clean state..."
     dfx stop 2>/dev/null || true
     dfx start --background --clean
+elif lsof -ti:8000 >/dev/null 2>&1; then
+    echo "dfx already running on port 8000"
 else
-    if dfx ping &>/dev/null; then
-        echo "dfx is already running"
-    else
-        echo "Starting dfx..."
-        dfx start --background
-    fi
+    echo "Starting dfx..."
+    dfx start --background
 fi
 
 sleep 2

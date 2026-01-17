@@ -72,6 +72,34 @@ type TokenMetadataRecord = record {
   total_supply : nat;
   symbol : text;
 };
+type TransactionDetailResponse = record {
+  id : nat;
+  fee : nat;
+  to_owner : text;
+  to_subaccount : text;
+  from_owner : text;
+  kind : text;
+  memo : text;
+  from_subaccount : text;
+  timestamp : nat;
+  amount : nat;
+};
+type TransactionInfo = record {
+  id : nat;
+  fee : nat;
+  kind : text;
+  to_address : text;
+  from_address : text;
+  timestamp : nat;
+  amount : nat;
+};
+type TransactionListResponse = record {
+  page_size : nat;
+  page : nat;
+  transactions : vec TransactionInfo;
+  total_count : nat;
+  has_more : bool;
+};
 type TransferArgs = record {
   to : Account;
   fee : opt nat;
@@ -94,6 +122,9 @@ service : (InitArgs) -> {
   get_owner : () -> (text) query;
   get_token_distribution : () -> (TokenDistribution) query;
   get_token_info : () -> (TokenMetadataRecord) query;
+  get_top_holders : (nat) -> (vec HolderInfo) query;
+  get_transaction : (nat) -> (opt TransactionDetailResponse) query;
+  get_transactions : (nat, nat) -> (TransactionListResponse) query;
   icrc1_balance_of : (Account) -> (nat) query;
   icrc1_decimals : () -> (nat8) query;
   icrc1_fee : () -> (nat) query;
