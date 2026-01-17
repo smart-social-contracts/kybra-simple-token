@@ -34,6 +34,17 @@
   let recentTxs = [];
   let txLoading = true;
   let totalTxCount = 0;
+  let copiedAddr = null;
+
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      copiedAddr = text;
+      setTimeout(() => copiedAddr = null, 1500);
+    } catch (e) {
+      console.error("Copy failed:", e);
+    }
+  }
 
   const CHART_COLORS = [
     "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
@@ -357,7 +368,12 @@
                 {#each topHolders.slice(0, 10) as holder, i}
                   <tr>
                     <td class="rank">{i + 1}</td>
-                    <td class="address" title={holder.address}>{truncateAddress(holder.address)}</td>
+                    <td class="address" title={holder.address}>
+                      {truncateAddress(holder.address)}
+                      <button class="copy-btn" on:click|stopPropagation={() => copyToClipboard(holder.address)}>
+                        {copiedAddr === holder.address ? '✓' : '📋'}
+                      </button>
+                    </td>
                     <td class="balance">{formatAmount(holder.balance, decimals)}</td>
                   </tr>
                 {/each}

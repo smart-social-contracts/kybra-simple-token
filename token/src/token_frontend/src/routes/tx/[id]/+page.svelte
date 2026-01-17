@@ -9,6 +9,7 @@
   let error = null;
   let decimals = 8;
   let tokenSymbol = "SMPL";
+  let copiedField = null;
 
   $: txId = $page.params.id;
 
@@ -28,6 +29,16 @@
       case "mint": return "badge-mint";
       case "burn": return "badge-burn";
       default: return "badge-transfer";
+    }
+  }
+
+  async function copyToClipboard(text, field) {
+    try {
+      await navigator.clipboard.writeText(text);
+      copiedField = field;
+      setTimeout(() => copiedField = null, 1500);
+    } catch (e) {
+      console.error("Copy failed:", e);
     }
   }
 
@@ -75,7 +86,12 @@
       <div class="detail-card">
         <div class="detail-row header-row">
           <span class="label">Transaction ID</span>
-          <span class="value tx-id">#{transaction.id.toString()}</span>
+          <span class="value tx-id">
+            #{transaction.id.toString()}
+            <button class="copy-btn" on:click={() => copyToClipboard(transaction.id.toString(), 'txid')}>
+              {copiedField === 'txid' ? '✓' : '📋'}
+            </button>
+          </span>
         </div>
 
         <div class="detail-row">
@@ -99,7 +115,12 @@
 
         <div class="detail-row">
           <span class="label">Datetime</span>
-          <span class="value mono">{formatTimestamp(transaction.timestamp)}</span>
+          <span class="value mono">
+            {formatTimestamp(transaction.timestamp)}
+            <button class="copy-btn" on:click={() => copyToClipboard(formatTimestamp(transaction.timestamp), 'datetime')}>
+              {copiedField === 'datetime' ? '✓' : '📋'}
+            </button>
+          </span>
         </div>
 
         <div class="section-divider"></div>
@@ -112,6 +133,9 @@
               {#if transaction.from_subaccount}
                 <span class="subaccount">:{transaction.from_subaccount}</span>
               {/if}
+              <button class="copy-btn" on:click={() => copyToClipboard(transaction.from_owner + (transaction.from_subaccount ? ':' + transaction.from_subaccount : ''), 'from')}>
+                {copiedField === 'from' ? '✓' : '📋'}
+              </button>
             {:else}
               <span class="minted">— (Minted)</span>
             {/if}
@@ -125,6 +149,9 @@
             {#if transaction.to_subaccount}
               <span class="subaccount">:{transaction.to_subaccount}</span>
             {/if}
+            <button class="copy-btn" on:click={() => copyToClipboard(transaction.to_owner + (transaction.to_subaccount ? ':' + transaction.to_subaccount : ''), 'to')}>
+              {copiedField === 'to' ? '✓' : '📋'}
+            </button>
           </span>
         </div>
 
@@ -132,14 +159,24 @@
           <div class="section-divider"></div>
           <div class="detail-row">
             <span class="label">Memo</span>
-            <span class="value memo">{transaction.memo}</span>
+            <span class="value memo">
+              {transaction.memo}
+              <button class="copy-btn" on:click={() => copyToClipboard(transaction.memo, 'memo')}>
+                {copiedField === 'memo' ? '✓' : '📋'}
+              </button>
+            </span>
           </div>
         {/if}
 
         <div class="section-divider"></div>
         <div class="detail-row">
           <span class="label">Timestamp (ns)</span>
-          <span class="value mono">{transaction.timestamp.toString()}</span>
+          <span class="value mono">
+            {transaction.timestamp.toString()}
+            <button class="copy-btn" on:click={() => copyToClipboard(transaction.timestamp.toString(), 'ts')}>
+              {copiedField === 'ts' ? '✓' : '📋'}
+            </button>
+          </span>
         </div>
       </div>
     {/if}
@@ -297,5 +334,21 @@
     color: var(--color-error);
     background: #fef2f2;
     border-color: #fecaca;
+  }
+
+  .copy-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 6px;
+    margin-left: 8px;
+    font-size: 0.75rem;
+    opacity: 0.5;
+    transition: opacity 0.15s;
+    vertical-align: middle;
+  }
+
+  .copy-btn:hover {
+    opacity: 1;
   }
 </style>
