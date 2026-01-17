@@ -19,13 +19,28 @@ echo "🚀 Deploying to staging network..."
 IDENTITY=$(dfx identity whoami)
 echo "Using identity: $IDENTITY"
 
+# Verify canister_ids.json exists and has staging entries
+if [ ! -f "canister_ids.json" ]; then
+    echo "❌ Error: canister_ids.json not found. Canisters must be created manually first."
+    exit 1
+fi
+
+if ! grep -q '"staging"' canister_ids.json; then
+    echo "❌ Error: No staging canister IDs found in canister_ids.json."
+    echo "Canisters must be created manually first (canister creation is expensive)."
+    exit 1
+fi
+
+echo "✓ Found existing staging canister IDs"
+
 # Install frontend dependencies
 echo "Installing frontend dependencies..."
 cd src/token_frontend && npm install && cd ../..
 
-# Deploy to staging
-echo "Deploying canisters to staging..."
-dfx deploy --network staging
+# Deploy to staging (upgrade only, no creation)
+# --no-wallet prevents automatic canister creation
+echo "Deploying canisters to staging (upgrade only)..."
+dfx deploy --network staging --no-wallet
 
 # Get canister IDs
 BACKEND_ID=$(dfx canister id token_backend --network staging)

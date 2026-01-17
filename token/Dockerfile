@@ -21,6 +21,7 @@ RUN npm ci
 # Configuration files
 COPY dfx.json ./dfx.json
 COPY tsconfig.json ./tsconfig.json
+COPY canister_ids.json ./canister_ids.json
 
 # Source code
 COPY src ./src
