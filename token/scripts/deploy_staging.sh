@@ -51,6 +51,10 @@ fi
 
 echo "✓ Found existing staging canister IDs"
 
+# Install Python dependencies
+echo "Installing Python dependencies..."
+pip install -q -r requirements.txt
+
 # Install frontend dependencies
 echo "Installing frontend dependencies..."
 cd src/token_frontend && npm install && cd ../..
