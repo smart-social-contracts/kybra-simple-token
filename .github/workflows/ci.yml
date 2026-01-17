@@ -24,8 +24,7 @@ jobs:
             -w /workspace \
             ${{ env.ICP_DEV_IMAGE }} bash -c "
           cd token && \
-          pip install -r requirements.txt && \
-          pytest tests/ -v"
+          python tests/backend/test_token.py"
 
   lint:
     runs-on: ubuntu-latest

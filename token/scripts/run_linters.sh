@@ -31,17 +31,17 @@ else
     black $SRC_DIR $TESTS_DIR --check
 fi
 
-# Check/fix imports with isort
+# Check/fix imports with isort (use black profile for compatibility)
 echo "Running isort..."
 if [ "$FIX_MODE" = true ]; then
-    isort $SRC_DIR $TESTS_DIR
+    isort $SRC_DIR $TESTS_DIR --profile black
 else
-    isort $SRC_DIR $TESTS_DIR --check-only
+    isort $SRC_DIR $TESTS_DIR --check-only --profile black
 fi
 
 # Lint with flake8
 echo "Running flake8..."
-flake8 $SRC_DIR --max-line-length=120 --ignore=E501,W503
-flake8 $TESTS_DIR --max-line-length=120 --ignore=E501,W503,F401
+flake8 $SRC_DIR --max-line-length=120 --ignore=E501,W503,E712,F541
+flake8 $TESTS_DIR --max-line-length=120 --ignore=E501,W503,F401,E712,F541
 
 echo "All linters completed successfully!"

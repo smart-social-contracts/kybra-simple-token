@@ -7,8 +7,8 @@ Tests basic token operations using mock storage.
 import os
 import sys
 import time
-from unittest.mock import MagicMock
 from types import ModuleType
+from unittest.mock import MagicMock
 
 
 # Create subscriptable mock types
@@ -225,7 +225,7 @@ def test_token_constants():
     """Test token configuration constants"""
     try:
         # Import after mocking
-        from main import TOKEN_NAME, TOKEN_SYMBOL, TOKEN_DECIMALS, TOKEN_FEE
+        from main import TOKEN_DECIMALS, TOKEN_FEE, TOKEN_NAME, TOKEN_SYMBOL
 
         assert (
             TOKEN_NAME == "Simple Token"
@@ -478,7 +478,7 @@ def test_mint_unauthorized():
 def test_transaction_helper_block_index():
     """Test TransactionHelper block index management"""
     try:
-        from main import TransactionHelper, TokenConfig
+        from main import TokenConfig, TransactionHelper
 
         # Reset block index
         config = TokenConfig["next_block_index"]
@@ -514,7 +514,7 @@ def test_transaction_helper_block_index():
 def test_transaction_helper_log_transaction():
     """Test TransactionHelper.log_transaction"""
     try:
-        from main import TransactionHelper, TransactionLog, TokenConfig
+        from main import TokenConfig, TransactionHelper, TransactionLog
 
         # Clear existing transaction logs
         TransactionLog._instances.clear()
@@ -583,7 +583,7 @@ def test_transaction_helper_log_transaction():
 def test_transaction_helper_get_transactions_for_account():
     """Test TransactionHelper.get_transactions_for_account"""
     try:
-        from main import TransactionHelper, TransactionLog, TokenConfig
+        from main import TokenConfig, TransactionHelper, TransactionLog
 
         # Clear existing data
         TransactionLog._instances.clear()
@@ -685,7 +685,7 @@ def test_transaction_helper_get_transactions_for_account():
 def test_transaction_log_with_subaccounts():
     """Test transaction logging with subaccounts"""
     try:
-        from main import TransactionHelper, TransactionLog, TokenConfig
+        from main import TokenConfig, TransactionHelper, TransactionLog
 
         # Clear existing data
         TransactionLog._instances.clear()
@@ -708,8 +708,8 @@ def test_transaction_log_with_subaccounts():
 
         # Verify subaccounts were stored correctly
         tx = TransactionLog[0]
-        assert tx.from_subaccount == subaccount1.hex(), f"from_subaccount mismatch"
-        assert tx.to_subaccount == subaccount2.hex(), f"to_subaccount mismatch"
+        assert tx.from_subaccount == subaccount1.hex(), "from_subaccount mismatch"
+        assert tx.to_subaccount == subaccount2.hex(), "to_subaccount mismatch"
 
         # Get transactions for alice with matching subaccount
         alice_sub1_txs = TransactionHelper.get_transactions_for_account(
@@ -745,7 +745,7 @@ def test_transaction_log_with_subaccounts():
 def test_transaction_log_with_memo():
     """Test transaction logging with memo"""
     try:
-        from main import TransactionHelper, TransactionLog, TokenConfig
+        from main import TokenConfig, TransactionHelper, TransactionLog
 
         # Clear existing data
         TransactionLog._instances.clear()
@@ -797,7 +797,7 @@ def test_transaction_log_with_memo():
 def test_indexer_multiple_transactions():
     """Test indexer with a realistic sequence of transactions"""
     try:
-        from main import TransactionHelper, TransactionLog, TokenConfig, TokenHelper
+        from main import TokenConfig, TokenHelper, TransactionHelper, TransactionLog
 
         # Clear existing data
         TransactionLog._instances.clear()
@@ -925,7 +925,7 @@ def test_test_mode_config():
 def test_mint_allowed_in_test_mode():
     """Test that non-owner can mint when test mode is enabled"""
     try:
-        from main import TokenConfig, OwnerHelper, TokenHelper
+        from main import OwnerHelper, TokenConfig, TokenHelper
 
         # Set owner to a different principal (not the mock caller 'aaaaa-aa')
         OwnerHelper.set_owner("real-owner-principal")
@@ -963,7 +963,7 @@ def test_mint_allowed_in_test_mode():
 def test_mint_denied_without_test_mode():
     """Test that non-owner cannot mint when test mode is disabled"""
     try:
-        from main import TokenConfig, OwnerHelper
+        from main import OwnerHelper, TokenConfig
 
         # Set owner to a different principal
         OwnerHelper.set_owner("real-owner-principal")

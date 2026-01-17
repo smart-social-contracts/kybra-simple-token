@@ -281,7 +281,7 @@ def init_(args: InitArgs) -> void:
     TokenHelper.set_total_supply(args["total_supply"])
     if args.get("test"):
         TokenConfig(key="test", value="true")
-        logger.info(f"Test mode enabled - public minting allowed")
+        logger.info("Test mode enabled - public minting allowed")
     logger.info(f"Token initialized. Supply: {args['total_supply']} to {deployer}")
 
 
