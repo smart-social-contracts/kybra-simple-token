@@ -39,8 +39,9 @@ cd src/token_frontend && npm install && cd ../..
 
 # Deploy to staging (upgrade only, no creation)
 # --no-wallet prevents automatic canister creation
+# --yes auto-confirms Candid interface changes for CI
 echo "Deploying canisters to staging (upgrade only)..."
-dfx deploy --network staging --no-wallet
+dfx deploy --network staging --no-wallet --yes
 
 # Get canister IDs
 BACKEND_ID=$(dfx canister id token_backend --network staging)
