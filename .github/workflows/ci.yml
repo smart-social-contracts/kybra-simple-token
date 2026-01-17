@@ -56,4 +56,4 @@ jobs:
             -v "$(pwd):/workspace" \
             -w /workspace \
             ${{ env.ICP_DEV_IMAGE }} bash -c "
-          ./scripts/deploy_local.sh --clean"
+          ./token/scripts/deploy_local.sh --clean"
