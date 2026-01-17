@@ -3,10 +3,20 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import environment from 'vite-plugin-environment';
 import dotenv from 'dotenv';
+import { execSync } from 'child_process';
 
 dotenv.config({ path: '../../.env' });
 
+const commitHash = execSync('git rev-parse --short HEAD').toString().trim();
+const buildTime = new Date().toISOString();
+const version = process.env.npm_package_version || '0.1.0';
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+    __COMMIT_HASH__: JSON.stringify(commitHash),
+    __BUILD_TIME__: JSON.stringify(buildTime),
+  },
   build: {
     emptyOutDir: true,
   },
