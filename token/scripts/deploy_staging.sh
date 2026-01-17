@@ -1,9 +1,24 @@
 #!/bin/bash
 # Deploy canisters to staging network
-# Usage: ./token/scripts/deploy_staging.sh
+# Usage: ./token/scripts/deploy_staging.sh [--reinstall]
 # Requires: DFX identity with cycles
+#
+# Options:
+#   --reinstall   Force reinstall (clears all canister state)
+#                 Use only when canister state is corrupted
 
 set -e
+
+# Parse arguments
+REINSTALL_MODE=false
+for arg in "$@"; do
+    case $arg in
+        --reinstall)
+            REINSTALL_MODE=true
+            shift
+            ;;
+    esac
+done
 
 # Ensure dfxvm default is set (may be reset by volume mounts)
 dfxvm default 0.29.0 2>/dev/null || true
@@ -14,6 +29,9 @@ if [ -d "token/src" ]; then
 fi
 
 echo "🚀 Deploying to staging network..."
+if [ "$REINSTALL_MODE" = true ]; then
+    echo "⚠️  REINSTALL MODE: All canister state will be cleared!"
+fi
 
 # Check identity
 IDENTITY=$(dfx identity whoami)
@@ -40,8 +58,13 @@ cd src/token_frontend && npm install && cd ../..
 # Deploy to staging (upgrade only, no creation)
 # --no-wallet prevents automatic canister creation
 # --yes auto-confirms Candid interface changes for CI
-echo "Deploying canisters to staging (upgrade only)..."
-dfx deploy --network staging --no-wallet --yes
+if [ "$REINSTALL_MODE" = true ]; then
+    echo "Deploying canisters to staging (REINSTALL mode)..."
+    dfx deploy --network staging --no-wallet --yes --mode reinstall
+else
+    echo "Deploying canisters to staging (upgrade only)..."
+    dfx deploy --network staging --no-wallet --yes
+fi
 
 # Get canister IDs
 BACKEND_ID=$(dfx canister id token_backend --network staging)
