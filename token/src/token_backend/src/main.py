@@ -666,3 +666,125 @@ def get_account_transactions(
     )
 
     return GetTransactionsResult(Ok=response)
+
+
+# ============================================================================
+# Transaction Explorer Types and Methods
+# ============================================================================
+
+
+class TransactionInfo(Record):
+    id: nat
+    kind: text
+    timestamp: nat
+    from_address: text
+    to_address: text
+    amount: nat
+    fee: nat
+
+
+class TransactionListResponse(Record):
+    transactions: Vec[TransactionInfo]
+    total_count: nat
+    page: nat
+    page_size: nat
+    has_more: bool
+
+
+class TransactionDetailResponse(Record):
+    id: nat
+    kind: text
+    timestamp: nat
+    from_owner: text
+    from_subaccount: text
+    to_owner: text
+    to_subaccount: text
+    amount: nat
+    fee: nat
+    memo: text
+
+
+@query
+def get_transactions(page: nat, page_size: nat) -> TransactionListResponse:
+    """Get paginated list of all transactions."""
+    if page_size == 0:
+        page_size = 20
+    if page_size > 100:
+        page_size = 100
+
+    all_txs = list(TransactionLog.instances())
+    all_txs.sort(key=lambda x: x.id, reverse=True)
+
+    total_count = len(all_txs)
+    start_idx = page * page_size
+    end_idx = start_idx + page_size
+
+    page_txs = all_txs[start_idx:end_idx]
+
+    transactions = []
+    for tx in page_txs:
+        from_addr = tx.from_owner
+        if tx.from_subaccount:
+            from_addr = f"{from_addr}:{tx.from_subaccount[:8]}"
+
+        to_addr = tx.to_owner
+        if tx.to_subaccount:
+            to_addr = f"{to_addr}:{tx.to_subaccount[:8]}"
+
+        transactions.append(
+            TransactionInfo(
+                id=tx.id,
+                kind=tx.kind,
+                timestamp=tx.timestamp,
+                from_address=from_addr,
+                to_address=to_addr,
+                amount=tx.amount,
+                fee=tx.fee or 0,
+            )
+        )
+
+    return TransactionListResponse(
+        transactions=transactions,
+        total_count=total_count,
+        page=page,
+        page_size=page_size,
+        has_more=end_idx < total_count,
+    )
+
+
+@query
+def get_transaction(tx_id: nat) -> Opt[TransactionDetailResponse]:
+    """Get details of a specific transaction by ID."""
+    tx = TransactionLog[tx_id]
+    if tx is None:
+        return None
+
+    return TransactionDetailResponse(
+        id=tx.id,
+        kind=tx.kind,
+        timestamp=tx.timestamp,
+        from_owner=tx.from_owner,
+        from_subaccount=tx.from_subaccount,
+        to_owner=tx.to_owner,
+        to_subaccount=tx.to_subaccount,
+        amount=tx.amount,
+        fee=tx.fee or 0,
+        memo=tx.memo or "",
+    )
+
+
+@query
+def get_top_holders(limit: nat) -> Vec[HolderInfo]:
+    """Get the top N token holders by balance."""
+    if limit == 0:
+        limit = 10
+    if limit > 100:
+        limit = 100
+
+    holders = []
+    for balance in TokenBalance.instances():
+        if balance.amount and balance.amount > 0:
+            holders.append(HolderInfo(address=balance.id, balance=balance.amount))
+
+    holders.sort(key=lambda h: h["balance"], reverse=True)
+    return holders[:limit]

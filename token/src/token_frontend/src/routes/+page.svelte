@@ -11,6 +11,7 @@
   let tokenSymbol = "";
   let totalSupply = "Loading...";
   let decimals = 8;
+  let fee = 0;
   let loading = true;
   let error = null;
 
@@ -25,17 +26,28 @@
   let distributionLoading = true;
   let distributionError = null;
   let holderCount = 0;
+  let topHolders = [];
   let chartCanvas;
   let chart = null;
+  let chartData = [];
+
+  let recentTxs = [];
+  let txLoading = true;
+  let totalTxCount = 0;
 
   const CHART_COLORS = [
-    "#171717", "#404040", "#525252", "#737373", "#A3A3A3",
-    "#262626", "#6B7280", "#4B5563", "#374151", "#1F2937",
+    "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
+    "#06b6d4", "#ec4899", "#84cc16", "#6366f1", "#a3a3a3",
   ];
 
   function formatSupply(supply, dec) {
     const value = Number(supply) / Math.pow(10, dec);
     return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
+
+  function formatAmount(amount, dec) {
+    const value = Number(amount) / Math.pow(10, dec);
+    return value.toLocaleString(undefined, { maximumFractionDigits: 4 });
   }
 
   function parseAmount(amountStr, dec) {
@@ -47,8 +59,21 @@
   }
 
   function truncateAddress(address) {
+    if (!address) return "—";
     if (address.length <= 16) return address;
     return `${address.slice(0, 8)}...${address.slice(-6)}`;
+  }
+
+  function formatTimestamp(nanos) {
+    const ms = Number(nanos) / 1_000_000;
+    const date = new Date(ms);
+    const now = new Date();
+    const diff = now - date;
+    
+    if (diff < 60000) return "just now";
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    return date.toLocaleDateString();
   }
 
   async function refreshTokenInfo() {
@@ -61,8 +86,13 @@
     distributionError = null;
 
     try {
-      const distribution = await backend.get_token_distribution();
+      const [distribution, holders] = await Promise.all([
+        backend.get_token_distribution(),
+        backend.get_top_holders(BigInt(10)),
+      ]);
+      
       holderCount = Number(distribution.holder_count);
+      topHolders = holders;
       const total = Number(distribution.total_supply);
 
       if (distribution.holders.length === 0) {
@@ -70,26 +100,26 @@
         return;
       }
 
-      const TOP_N = 8;
-      const holders = distribution.holders;
-      let chartData = [];
+      const TOP_N = 6;
+      const allHolders = distribution.holders;
+      chartData = [];
       let othersBalance = 0n;
 
-      for (let i = 0; i < holders.length; i++) {
+      for (let i = 0; i < allHolders.length; i++) {
         if (i < TOP_N) {
           chartData.push({
-            address: holders[i].address,
-            balance: Number(holders[i].balance),
-            percentage: (Number(holders[i].balance) / total) * 100,
+            address: allHolders[i].address,
+            balance: Number(allHolders[i].balance),
+            percentage: (Number(allHolders[i].balance) / total) * 100,
           });
         } else {
-          othersBalance += BigInt(holders[i].balance);
+          othersBalance += BigInt(allHolders[i].balance);
         }
       }
 
       if (othersBalance > 0n) {
         chartData.push({
-          address: `Others (${holders.length - TOP_N} holders)`,
+          address: `Others (${allHolders.length - TOP_N})`,
           balance: Number(othersBalance),
           percentage: (Number(othersBalance) / total) * 100,
         });
@@ -97,57 +127,69 @@
 
       if (chart) {
         chart.destroy();
+        chart = null;
       }
 
-      if (chartCanvas) {
-        chart = new Chart(chartCanvas, {
-          type: "pie",
-          data: {
-            labels: chartData.map((d) => truncateAddress(d.address)),
-            datasets: [
-              {
-                data: chartData.map((d) => d.balance),
-                backgroundColor: CHART_COLORS.slice(0, chartData.length),
-                borderColor: "#FFFFFF",
-                borderWidth: 2,
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-              legend: {
-                position: "bottom",
-                labels: {
-                  color: "#525252",
-                  padding: 12,
-                  font: { size: 11 },
-                  boxWidth: 12,
+      // Use requestAnimationFrame to ensure canvas is ready
+      requestAnimationFrame(() => {
+        if (chartCanvas && chartData.length > 0) {
+          const ctx = chartCanvas.getContext('2d');
+          chart = new Chart(ctx, {
+            type: "pie",
+            data: {
+              labels: chartData.map((d) => truncateAddress(d.address)),
+              datasets: [
+                {
+                  data: chartData.map((d) => d.balance),
+                  backgroundColor: CHART_COLORS.slice(0, chartData.length),
+                  borderColor: "#FFFFFF",
+                  borderWidth: 2,
                 },
-              },
-              tooltip: {
-                callbacks: {
-                  label: (context) => {
-                    const item = chartData[context.dataIndex];
-                    const formattedBalance = formatSupply(item.balance, decimals);
-                    return `${formattedBalance} ${tokenSymbol} (${item.percentage.toFixed(2)}%)`;
-                  },
-                  title: (context) => {
-                    return chartData[context[0].dataIndex].address;
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: true,
+              plugins: {
+                legend: {
+                  display: false,
+                },
+                tooltip: {
+                  callbacks: {
+                    label: (context) => {
+                      const item = chartData[context.dataIndex];
+                      const formattedBalance = formatSupply(item.balance, decimals);
+                      return `${formattedBalance} ${tokenSymbol} (${item.percentage.toFixed(1)}%)`;
+                    },
+                    title: (context) => {
+                      return chartData[context[0].dataIndex].address;
+                    },
                   },
                 },
               },
             },
-          },
-        });
-      }
+          });
+        }
+      });
 
       distributionLoading = false;
     } catch (e) {
       console.error("Error loading distribution:", e);
       distributionError = e.message || "Failed to load distribution";
       distributionLoading = false;
+    }
+  }
+
+  async function loadRecentTransactions() {
+    txLoading = true;
+    try {
+      const result = await backend.get_transactions(BigInt(0), BigInt(5));
+      recentTxs = result.transactions;
+      totalTxCount = Number(result.total_count);
+    } catch (e) {
+      console.error("Error loading transactions:", e);
+    } finally {
+      txLoading = false;
     }
   }
 
@@ -179,10 +221,11 @@
       });
 
       if (result.success) {
-        mintResult = `Successfully minted ${mintAmount} ${tokenSymbol} to ${recipient}`;
+        mintResult = `Minted ${mintAmount} ${tokenSymbol}`;
         mintAmount = "";
         await refreshTokenInfo();
         await loadDistribution();
+        await loadRecentTransactions();
       } else {
         mintError = result.error?.[0] || "Mint operation failed";
       }
@@ -204,12 +247,16 @@
       tokenName = info.name;
       tokenSymbol = info.symbol;
       decimals = Number(info.decimals);
+      fee = Number(info.fee);
       totalSupply = formatSupply(info.total_supply, decimals);
       testMode = isTestMode;
       myPrincipal = principal;
       loading = false;
 
-      await loadDistribution();
+      await Promise.all([
+        loadDistribution(),
+        loadRecentTransactions(),
+      ]);
     } catch (e) {
       console.error("Error fetching token info:", e);
       error = e.message || "Failed to load token info";
@@ -225,78 +272,171 @@
 </script>
 
 <main>
-  <div class="token-card">
-    <h1>🪙 ICRC-1 Token</h1>
-    
+  <div class="dashboard">
+    <header class="dashboard-header">
+      <h1>🪙 {tokenName || "Token"} Dashboard</h1>
+      {#if tokenSymbol}
+        <span class="badge">{tokenSymbol}</span>
+      {/if}
+    </header>
+
     {#if loading}
-      <div class="loading">Loading token information...</div>
+      <div class="loading-container">
+        <div class="loading">Loading dashboard...</div>
+      </div>
     {:else if error}
       <div class="error">{error}</div>
     {:else}
-      <div class="token-info">
-        <div class="info-row">
-          <span class="label">Name:</span>
-          <span class="value">{tokenName}</span>
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Supply</div>
+          <div class="stat-value supply">{totalSupply}</div>
+          <div class="stat-unit">{tokenSymbol}</div>
         </div>
-        <div class="info-row">
-          <span class="label">Symbol:</span>
-          <span class="value">{tokenSymbol}</span>
+        <div class="stat-card">
+          <div class="stat-label">Holders</div>
+          <div class="stat-value">{holderCount}</div>
+          <div class="stat-unit">addresses</div>
         </div>
-        <div class="info-row">
-          <span class="label">Total Supply:</span>
-          <span class="value supply">{totalSupply} {tokenSymbol}</span>
+        <div class="stat-card">
+          <div class="stat-label">Transactions</div>
+          <div class="stat-value">{totalTxCount}</div>
+          <div class="stat-unit">total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Transfer Fee</div>
+          <div class="stat-value">{formatAmount(fee, decimals)}</div>
+          <div class="stat-unit">{tokenSymbol}</div>
         </div>
       </div>
 
-      <div class="distribution-section">
-        <h2>📊 Token Distribution</h2>
-        {#if distributionLoading}
-          <div class="loading">Loading distribution...</div>
-        {:else if distributionError}
-          <div class="error">{distributionError}</div>
-        {:else if holderCount === 0}
-          <div class="no-holders">No token holders yet</div>
+      <div class="main-grid">
+        <!-- Distribution Section -->
+        <div class="card distribution-card">
+          <h2>📊 Distribution</h2>
+          {#if distributionLoading}
+            <div class="loading">Loading...</div>
+          {:else if distributionError}
+            <div class="error">{distributionError}</div>
+          {:else if holderCount === 0}
+            <div class="no-data">No token holders yet</div>
+          {:else}
+            <div class="chart-wrapper">
+              <canvas bind:this={chartCanvas}></canvas>
+            </div>
+            <div class="chart-legend">
+              {#each chartData as item, i}
+                <div class="legend-item">
+                  <span class="legend-color" style="background: {CHART_COLORS[i]}"></span>
+                  <span class="legend-label" title={item.address}>{truncateAddress(item.address)}</span>
+                  <span class="legend-value">{item.percentage.toFixed(1)}%</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+
+        <!-- Top Holders Section -->
+        <div class="card holders-card">
+          <h2>🏆 Top Holders</h2>
+          {#if distributionLoading}
+            <div class="loading">Loading...</div>
+          {:else if topHolders.length === 0}
+            <div class="no-data">No holders yet</div>
+          {:else}
+            <table class="holders-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Address</th>
+                  <th>Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each topHolders.slice(0, 10) as holder, i}
+                  <tr>
+                    <td class="rank">{i + 1}</td>
+                    <td class="address" title={holder.address}>{truncateAddress(holder.address)}</td>
+                    <td class="balance">{formatAmount(holder.balance, decimals)}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {/if}
+        </div>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="card transactions-card">
+        <div class="card-header">
+          <h2>📋 Recent Transactions</h2>
+          <a href="/txs" class="view-all">View All →</a>
+        </div>
+        {#if txLoading}
+          <div class="loading">Loading...</div>
+        {:else if recentTxs.length === 0}
+          <div class="no-data">No transactions yet</div>
         {:else}
-          <div class="distribution-stats">
-            <span class="holder-count">{holderCount} holder{holderCount !== 1 ? 's' : ''}</span>
-          </div>
-          <div class="chart-container">
-            <canvas bind:this={chartCanvas}></canvas>
-          </div>
+          <table class="tx-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Type</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Amount</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each recentTxs as tx}
+                <tr class="clickable" on:click={() => window.location.href = `/tx/${tx.id}`}>
+                  <td class="tx-id">#{tx.id.toString()}</td>
+                  <td><span class="tx-badge {tx.kind}">{tx.kind}</span></td>
+                  <td class="address" title={tx.from_address}>{truncateAddress(tx.from_address)}</td>
+                  <td class="address" title={tx.to_address}>{truncateAddress(tx.to_address)}</td>
+                  <td class="amount">{formatAmount(tx.amount, decimals)}</td>
+                  <td class="time">{formatTimestamp(tx.timestamp)}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
         {/if}
       </div>
 
+      <!-- Mint Section (Test Mode Only) -->
       {#if testMode}
-        <div class="mint-section">
+        <div class="card mint-card">
           <h2>🧪 Mint Tokens (Test Mode)</h2>
           <div class="mint-form">
-            <div class="form-group">
-              <label for="recipient">Recipient Principal</label>
-              <input
-                type="text"
-                id="recipient"
-                bind:value={mintRecipient}
-                placeholder={myPrincipal}
-                disabled={minting}
-              />
-              <span class="hint">Leave empty to mint to yourself</span>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="recipient">Recipient</label>
+                <input
+                  type="text"
+                  id="recipient"
+                  bind:value={mintRecipient}
+                  placeholder={truncateAddress(myPrincipal)}
+                  disabled={minting}
+                />
+              </div>
+              <div class="form-group amount-group">
+                <label for="amount">Amount</label>
+                <input
+                  type="number"
+                  id="amount"
+                  bind:value={mintAmount}
+                  placeholder="0.00"
+                  min="0"
+                  step="any"
+                  disabled={minting}
+                />
+              </div>
+              <button class="mint-button" on:click={handleMint} disabled={minting}>
+                {minting ? "..." : "Mint"}
+              </button>
             </div>
-            <div class="form-group">
-              <label for="amount">Amount ({tokenSymbol})</label>
-              <input
-                type="number"
-                id="amount"
-                bind:value={mintAmount}
-                placeholder="0.00"
-                min="0"
-                step="any"
-                disabled={minting}
-              />
-            </div>
-            <button class="mint-button" on:click={handleMint} disabled={minting}>
-              {minting ? "Minting..." : "Mint Tokens"}
-            </button>
-
             {#if mintResult}
               <div class="mint-success">{mintResult}</div>
             {/if}
