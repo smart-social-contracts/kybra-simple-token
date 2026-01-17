@@ -20,7 +20,9 @@ if [ "$CLEAN" = true ]; then
     dfx stop 2>/dev/null || true
     dfx start --background --clean
 else
-    if ! dfx ping &>/dev/null; then
+    if dfx ping &>/dev/null; then
+        echo "dfx is already running"
+    else
         echo "Starting dfx..."
         dfx start --background
     fi
