@@ -17,7 +17,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       
-      - name: Run CI (lint, test, deploy-test)
+      - name: Run CI (lint, unit tests, integration tests)
         run: |
           docker run --rm \
             -v "$(pwd):/workspace" \
@@ -28,10 +28,10 @@ jobs:
           pip install -q flake8 black isort
           ./token/scripts/run_linters.sh
           
-          echo '=== Backend Tests ==='
+          echo '=== Unit Tests ==='
           cd token && python tests/backend/test_token.py && cd ..
           
-          echo '=== Deploy Test ==='
-          ./token/scripts/deploy_local.sh --clean
+          echo '=== Integration Tests ==='
+          ./token/scripts/run_integration_tests.sh
           
           echo '=== All CI checks passed! ==='"

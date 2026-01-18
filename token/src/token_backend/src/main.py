@@ -317,8 +317,8 @@ def icrc1_minting_account() -> Opt[Account]:
 
 @query
 def icrc1_balance_of(account: Account) -> nat:
-    owner_str = account.owner.to_str()
-    return TokenHelper.get_balance(owner_str, account.subaccount)
+    owner_str = account['owner'].to_str()
+    return TokenHelper.get_balance(owner_str, account.get('subaccount'))
 
 
 @query
@@ -342,12 +342,12 @@ def icrc1_supported_standards() -> Vec[MetadataEntry]:
 def icrc1_transfer(args: TransferArgs) -> TransferResult:
     caller = ic.caller().to_str()
     logger.info(
-        f"Transfer request: {caller} -> {args.to.owner.to_str()}, amount: {args.amount}"
+        f"Transfer request: {caller} -> {args['to']['owner'].to_str()}, amount: {args['amount']}"
     )
 
-    sender_balance = TokenHelper.get_balance(caller, args.from_subaccount)
-    fee = args.fee if args.fee is not None else TOKEN_FEE
-    total_deduction = args.amount + fee
+    sender_balance = TokenHelper.get_balance(caller, args.get('from_subaccount'))
+    fee = args.get('fee') if args.get('fee') is not None else TOKEN_FEE
+    total_deduction = args['amount'] + fee
 
     if sender_balance < total_deduction:
         logger.warning(f"Insufficient balance: {sender_balance} < {total_deduction}")
@@ -357,14 +357,14 @@ def icrc1_transfer(args: TransferArgs) -> TransferResult:
             error=f"Insufficient balance. Have {sender_balance}, need {total_deduction}",
         )
 
-    recipient = args.to.owner.to_str()
-    recipient_balance = TokenHelper.get_balance(recipient, args.to.subaccount)
+    recipient = args['to']['owner'].to_str()
+    recipient_balance = TokenHelper.get_balance(recipient, args['to'].get('subaccount'))
 
     TokenHelper.set_balance(
-        caller, sender_balance - total_deduction, args.from_subaccount
+        caller, sender_balance - total_deduction, args.get('from_subaccount')
     )
     TokenHelper.set_balance(
-        recipient, recipient_balance + args.amount, args.to.subaccount
+        recipient, recipient_balance + args['amount'], args['to'].get('subaccount')
     )
 
     current_supply = TokenHelper.get_total_supply()
@@ -374,16 +374,16 @@ def icrc1_transfer(args: TransferArgs) -> TransferResult:
     block_index = TransactionHelper.log_transaction(
         kind="transfer",
         from_owner=caller,
-        from_subaccount=args.from_subaccount,
+        from_subaccount=args.get('from_subaccount'),
         to_owner=recipient,
-        to_subaccount=args.to.subaccount,
-        amount=args.amount,
+        to_subaccount=args['to'].get('subaccount'),
+        amount=args['amount'],
         fee=fee,
-        memo=args.memo,
+        memo=args.get('memo'),
     )
 
     logger.info(
-        f"Transfer successful: {args.amount} tokens transferred, block_index={block_index}"
+        f"Transfer successful: {args['amount']} tokens transferred, block_index={block_index}"
     )
 
     return TransferResult(success=True, block_index=block_index, error=None)
@@ -562,10 +562,10 @@ def get_account_transactions(
     ICRC-3 compatible method to get transaction history for an account.
     This is the indexer interface that the vault extension expects.
     """
-    owner_str = request.account.owner.to_str()
-    subaccount = request.account.subaccount
-    start = request.start
-    max_results = request.max_results if request.max_results else 20
+    owner_str = request['account']['owner'].to_str()
+    subaccount = request['account'].get('subaccount')
+    start = request.get('start')
+    max_results = request.get('max_results') if request.get('max_results') else 20
 
     logger.info(
         f"get_account_transactions: owner={owner_str}, start={start}, max_results={max_results}"
