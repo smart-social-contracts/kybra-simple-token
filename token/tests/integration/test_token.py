@@ -109,8 +109,6 @@ def assert_true(condition: bool, test_name: str):
 
 def run_tests():
     """Run all integration tests."""
-    global passed, failed
-
     # Get principals
     deployer = get_principal()
     alice = get_principal("test_alice")
