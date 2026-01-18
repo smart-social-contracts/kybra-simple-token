@@ -74,14 +74,18 @@ jobs:
           body: |
             ## ICRC-1 Token Release ${{ steps.version.outputs.VERSION }}
             
-            ### Artifacts
-            - `token_backend.wasm` - Backend canister
-            - `token_frontend.wasm` - Frontend canister
+            ### What's Changed
+            - 🐛 **Bug Fix**: Fixed Candid record deserialization in `icrc1_transfer`, `icrc1_balance_of`, and `get_account_transactions` (dict access instead of dot notation)
+            - ✅ **Integration Tests**: Added comprehensive integration test suite (27 tests) covering transfers, minting, balances, subaccounts, and transaction history
+            - 📝 **Documentation**: Added staging canister links to README
             
-            ### Features
-            - ICRC-1 compliant token implementation
-            - Kybra Python CDK backend
-            - SvelteKit frontend with token info, distribution chart, and mint UI
+            ### Staging Demo
+            - 🌐 Frontend: https://xglmt-7aaaa-aaaah-qq3yq-cai.icp0.io
+            - Backend: `xbkkh-syaaa-aaaah-qq3ya-cai`
+            
+            ### Artifacts
+            - `token_backend.wasm` - Backend canister (Kybra Python)
+            - `token_frontend.wasm` - Frontend canister (SvelteKit)
           files: |
             artifacts/token_backend.wasm.gz
             artifacts/token_backend.wasm
