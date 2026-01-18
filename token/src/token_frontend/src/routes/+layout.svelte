@@ -12,19 +12,7 @@
   
   <footer class="app-footer">
     <div class="footer-row ic-branding">
-      <svg width="24" height="24" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M64 128C99.3462 128 128 99.3462 128 64C128 28.6538 99.3462 0 64 0C28.6538 0 0 28.6538 0 64C0 99.3462 28.6538 128 64 128Z" fill="url(#paint0_linear)"/>
-        <path d="M54.5 42C61.4036 42 67 47.5964 67 54.5C67 61.4036 61.4036 67 54.5 67C47.5964 67 42 61.4036 42 54.5C42 47.5964 47.5964 42 54.5 42Z" fill="white"/>
-        <path d="M73.5 61C80.4036 61 86 66.5964 86 73.5C86 80.4036 80.4036 86 73.5 86C66.5964 86 61 80.4036 61 73.5C61 66.5964 66.5964 61 73.5 61Z" fill="white"/>
-        <defs>
-          <linearGradient id="paint0_linear" x1="64" y1="0" x2="64" y2="128" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#F15A24"/>
-            <stop offset="0.21" stop-color="#FBB03B"/>
-            <stop offset="0.52" stop-color="#ED1E79"/>
-            <stop offset="0.9" stop-color="#522785"/>
-          </linearGradient>
-        </defs>
-      </svg>
+      <img src="/internet-computer-icp-logo.svg" alt="Internet Computer" width="24" height="24" />
       <span>Built on the Internet Computer</span>
     </div>
     
