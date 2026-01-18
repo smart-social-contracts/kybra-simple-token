@@ -2,6 +2,15 @@
 
 An ICRC-1 token implementation in Kybra using `kybra`, `kybra-simple-db`, and `kybra_simple_logging`.
 
+## Live Demo (Staging)
+
+🌐 **Frontend**: [https://xglmt-7aaaa-aaaah-qq3yq-cai.icp0.io](https://xglmt-7aaaa-aaaah-qq3yq-cai.icp0.io)
+
+| Canister | ID | Dashboard |
+|----------|----|----|
+| Backend | `xbkkh-syaaa-aaaah-qq3ya-cai` | [View on IC Dashboard](https://dashboard.internetcomputer.org/canister/xbkkh-syaaa-aaaah-qq3ya-cai) |
+| Frontend | `xglmt-7aaaa-aaaah-qq3yq-cai` | [View on IC Dashboard](https://dashboard.internetcomputer.org/canister/xglmt-7aaaa-aaaah-qq3yq-cai) |
+
 ## Features
 
 - **ICRC-1 Compliant** - Full ICRC-1 token standard implementation
