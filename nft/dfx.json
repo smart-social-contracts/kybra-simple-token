@@ -24,6 +24,24 @@
       ],
       "init_arg": "(record { name = \"Simple NFT\"; symbol = \"SNFT\"; description = opt \"A simple ICRC-7/ICRC-37 NFT collection\"; supply_cap = null; test = opt true })"
     },
+    "dominion_nft_backend": {
+      "type": "custom",
+      "candid": "src/nft_backend/nft_backend.did",
+      "wasm": ".kybra/nft_backend/nft_backend.wasm",
+      "init_arg": "(record { name = \"Dominion Land\"; symbol = \"DLAND\"; description = opt \"Land ownership NFT for Dominion realm\"; supply_cap = opt 10000 : opt nat; test = opt false })"
+    },
+    "agora_nft_backend": {
+      "type": "custom",
+      "candid": "src/nft_backend/nft_backend.did",
+      "wasm": ".kybra/nft_backend/nft_backend.wasm",
+      "init_arg": "(record { name = \"Agora Land\"; symbol = \"ALAND\"; description = opt \"Land ownership NFT for Agora realm\"; supply_cap = opt 10000 : opt nat; test = opt false })"
+    },
+    "syntropia_nft_backend": {
+      "type": "custom",
+      "candid": "src/nft_backend/nft_backend.did",
+      "wasm": ".kybra/nft_backend/nft_backend.wasm",
+      "init_arg": "(record { name = \"Syntropia Land\"; symbol = \"SLAND\"; description = opt \"Land ownership NFT for Syntropia realm\"; supply_cap = opt 10000 : opt nat; test = opt false })"
+    },
     "nft_frontend": {
       "dependencies": [
         "nft_backend"
