@@ -220,6 +220,13 @@ kybra-simple-token/
 
 A non-fungible token implementation with approval and transfer-from support.
 
+### Live Demo (Staging)
+
+| Canister | ID | Dashboard |
+|----------|----|----|
+| Backend | `6hrip-iiaaa-aaaaf-qdoha-cai` | [View on IC Dashboard](https://dashboard.internetcomputer.org/canister/6hrip-iiaaa-aaaaf-qdoha-cai) |
+| Frontend | `6aqo3-fqaaa-aaaaf-qdohq-cai` | [View on IC Dashboard](https://dashboard.internetcomputer.org/canister/6aqo3-fqaaa-aaaaf-qdohq-cai) |
+
 ### Features
 
 - **ICRC-7** - NFT standard (ownership, metadata, transfers)

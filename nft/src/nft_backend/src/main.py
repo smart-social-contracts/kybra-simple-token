@@ -413,7 +413,6 @@ def _next_tx_id() -> int:
     collection = _get_collection()
     tx_id = collection.tx_count
     collection.tx_count = tx_id + 1
-    collection.save()
     return tx_id
 
 
@@ -443,7 +442,6 @@ def _log_transaction(
         spender_subaccount=spender_subaccount,
         memo=memo
     )
-    tx.save()
     return tx_id
 
 
@@ -456,7 +454,7 @@ def init_(args: InitArg) -> void:
     """Initialize the NFT collection."""
     logger.info(f"Initializing NFT collection: {args['name']} ({args['symbol']})")
     
-    collection = NFTCollection(
+    NFTCollection(
         id="config",
         name=args["name"],
         symbol=args["symbol"],
@@ -466,7 +464,6 @@ def init_(args: InitArg) -> void:
         tx_count=0,
         test_mode=1 if args.get("test") else 0
     )
-    collection.save()
     logger.info("NFT collection initialized")
 
 
@@ -656,7 +653,6 @@ def icrc7_transfer(args: Vec[TransferArg]) -> Vec[Opt[TransferResult]]:
         
         token.owner_principal = to_account["owner"].to_str()
         token.owner_subaccount = _subaccount_to_hex(to_account.get("subaccount"))
-        token.save()
         
         # Clear token-level approvals for this token
         all_approvals = NFTApproval.find_all()
@@ -829,7 +825,6 @@ def icrc37_approve_tokens(args: Vec[ApproveTokenArg]) -> Vec[Opt[ApproveTokenRes
             expires_at=approval_info.get("expires_at") or 0,
             created_at=approval_info.get("created_at_time") or ic.time()
         )
-        approval.save()
         
         tx_id = _log_transaction(
             kind="approve",
@@ -872,7 +867,6 @@ def icrc37_approve_collection(args: Vec[ApproveCollectionArg]) -> Vec[Opt[Approv
             expires_at=approval_info.get("expires_at") or 0,
             created_at=approval_info.get("created_at_time") or ic.time()
         )
-        approval.save()
         
         tx_id = _log_transaction(
             kind="approve_collection",
@@ -1025,7 +1019,6 @@ def icrc37_transfer_from(args: Vec[TransferFromArg]) -> Vec[Opt[TransferFromResu
         
         token.owner_principal = to_account["owner"].to_str()
         token.owner_subaccount = _subaccount_to_hex(to_account.get("subaccount"))
-        token.save()
         
         # Clear token-level approvals for this token
         all_approvals = NFTApproval.find_all()
@@ -1098,11 +1091,9 @@ def mint(arg: MintArg) -> MintResult:
         owner_subaccount=_subaccount_to_hex(owner.get("subaccount")),
         metadata_json=json.dumps(metadata_dict)
     )
-    token.save()
     
     # Update supply
     collection.total_supply += 1
-    collection.save()
     
     # Log transaction
     tx_id = _log_transaction(
