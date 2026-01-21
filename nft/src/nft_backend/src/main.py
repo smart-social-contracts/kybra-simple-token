@@ -88,7 +88,9 @@ class GenericBatchError(Record):
     message: str
 
 
-TransferResult = Variant({"Ok": nat, "Err": TransferError})
+class TransferResult(Variant, total=False):
+    Ok: nat
+    Err: TransferError
 
 
 class ApprovalInfo(Record):
@@ -113,7 +115,9 @@ class ApproveTokenError(Variant, total=False):
     GenericBatchError: "GenericBatchError"
 
 
-ApproveTokenResult = Variant({"Ok": nat, "Err": ApproveTokenError})
+class ApproveTokenResult(Variant, total=False):
+    Ok: nat
+    Err: ApproveTokenError
 
 
 class ApproveCollectionArg(Record):
@@ -127,7 +131,9 @@ class ApproveCollectionError(Variant, total=False):
     GenericBatchError: "GenericBatchError"
 
 
-ApproveCollectionResult = Variant({"Ok": nat, "Err": ApproveCollectionError})
+class ApproveCollectionResult(Variant, total=False):
+    Ok: nat
+    Err: ApproveCollectionError
 
 
 class RevokeTokenApprovalArg(Record):
@@ -148,7 +154,9 @@ class RevokeTokenApprovalError(Variant, total=False):
     GenericBatchError: "GenericBatchError"
 
 
-RevokeTokenApprovalResult = Variant({"Ok": nat, "Err": RevokeTokenApprovalError})
+class RevokeTokenApprovalResult(Variant, total=False):
+    Ok: nat
+    Err: RevokeTokenApprovalError
 
 
 class RevokeCollectionApprovalArg(Record):
@@ -166,7 +174,9 @@ class RevokeCollectionApprovalError(Variant, total=False):
     GenericBatchError: "GenericBatchError"
 
 
-RevokeCollectionApprovalResult = Variant({"Ok": nat, "Err": RevokeCollectionApprovalError})
+class RevokeCollectionApprovalResult(Variant, total=False):
+    Ok: nat
+    Err: RevokeCollectionApprovalError
 
 
 class TransferFromArg(Record):
@@ -189,7 +199,9 @@ class TransferFromError(Variant, total=False):
     GenericBatchError: "GenericBatchError"
 
 
-TransferFromResult = Variant({"Ok": nat, "Err": TransferFromError})
+class TransferFromResult(Variant, total=False):
+    Ok: nat
+    Err: TransferFromError
 
 
 class TokenApproval(Record):
@@ -202,12 +214,11 @@ class CollectionApproval(Record):
 
 
 # Metadata value types
-MetadataValue = Variant({
-    "Text": str,
-    "Blob": blob,
-    "Nat": nat,
-    "Int": int,
-})
+class MetadataValue(Variant, total=False):
+    Text: str
+    Blob: blob
+    Nat: nat
+    Int: int
 
 
 class InitArg(Record):
@@ -231,7 +242,29 @@ class MintError(Variant, total=False):
     GenericError: "GenericError"
 
 
-MintResult = Variant({"Ok": nat, "Err": MintError})
+class MintResult(Variant, total=False):
+    Ok: nat
+    Err: MintError
+
+
+# Candid Record types for query returns
+class StandardRecord(Record):
+    name: str
+    url: str
+
+
+class TransactionRecord(Record):
+    id: nat
+    kind: str
+    timestamp: nat64
+    token_id: nat
+    from_principal: str
+    from_subaccount: str
+    to_principal: str
+    to_subaccount: str
+    spender_principal: str
+    spender_subaccount: str
+    memo: str
 
 
 # =============================================================================
@@ -597,7 +630,7 @@ def icrc7_transfer(args: Vec[TransferArg]) -> Vec[Opt[TransferResult]]:
         token = _get_token(arg["token_id"])
         
         if not token:
-            results.append(TransferResult(Err=TransferError(NonExistingTokenId=None)))
+            results.append(TransferResult(Err=TransferError(NonExistingTokenId=null)))
             continue
         
         # Build caller account
@@ -608,13 +641,13 @@ def icrc7_transfer(args: Vec[TransferArg]) -> Vec[Opt[TransferResult]]:
         
         # Check ownership
         if not _is_owner(token, caller_account):
-            results.append(TransferResult(Err=TransferError(Unauthorized=None)))
+            results.append(TransferResult(Err=TransferError(Unauthorized=null)))
             continue
         
         # Check recipient is not the same as sender
         to_account = arg["to"]
         if _is_owner(token, to_account):
-            results.append(TransferResult(Err=TransferError(InvalidRecipient=None)))
+            results.append(TransferResult(Err=TransferError(InvalidRecipient=null)))
             continue
         
         # Perform transfer
@@ -766,7 +799,7 @@ def icrc37_approve_tokens(args: Vec[ApproveTokenArg]) -> Vec[Opt[ApproveTokenRes
         token = _get_token(arg["token_id"])
         
         if not token:
-            results.append(ApproveTokenResult(Err=ApproveTokenError(NonExistingTokenId=None)))
+            results.append(ApproveTokenResult(Err=ApproveTokenError(NonExistingTokenId=null)))
             continue
         
         # Build caller account
@@ -778,7 +811,7 @@ def icrc37_approve_tokens(args: Vec[ApproveTokenArg]) -> Vec[Opt[ApproveTokenRes
         
         # Check ownership
         if not _is_owner(token, caller_account):
-            results.append(ApproveTokenResult(Err=ApproveTokenError(Unauthorized=None)))
+            results.append(ApproveTokenResult(Err=ApproveTokenError(Unauthorized=null)))
             continue
         
         # Create approval
@@ -865,7 +898,7 @@ def icrc37_revoke_token_approvals(args: Vec[RevokeTokenApprovalArg]) -> Vec[Opt[
         token = _get_token(arg["token_id"])
         
         if not token:
-            results.append(RevokeTokenApprovalResult(Err=RevokeTokenApprovalError(NonExistingTokenId=None)))
+            results.append(RevokeTokenApprovalResult(Err=RevokeTokenApprovalError(NonExistingTokenId=null)))
             continue
         
         caller_account = Account(
@@ -875,7 +908,7 @@ def icrc37_revoke_token_approvals(args: Vec[RevokeTokenApprovalArg]) -> Vec[Opt[
         
         # Check ownership
         if not _is_owner(token, caller_account):
-            results.append(RevokeTokenApprovalResult(Err=RevokeTokenApprovalError(Unauthorized=None)))
+            results.append(RevokeTokenApprovalResult(Err=RevokeTokenApprovalError(Unauthorized=null)))
             continue
         
         spender = arg.get("spender")
@@ -884,7 +917,7 @@ def icrc37_revoke_token_approvals(args: Vec[RevokeTokenApprovalArg]) -> Vec[Opt[
             approval_id = _get_approval_id("token", int(arg["token_id"]), caller_account, spender)
             approvals = NFTApproval.find_by("id", approval_id)
             if not approvals:
-                results.append(RevokeTokenApprovalResult(Err=RevokeTokenApprovalError(ApprovalDoesNotExist=None)))
+                results.append(RevokeTokenApprovalResult(Err=RevokeTokenApprovalError(ApprovalDoesNotExist=null)))
                 continue
             approvals[0].delete()
         else:
@@ -925,7 +958,7 @@ def icrc37_revoke_collection_approvals(args: Vec[RevokeCollectionApprovalArg]) -
             approval_id = _get_approval_id("collection", 0, caller_account, spender)
             approvals = NFTApproval.find_by("id", approval_id)
             if not approvals:
-                results.append(RevokeCollectionApprovalResult(Err=RevokeCollectionApprovalError(ApprovalDoesNotExist=None)))
+                results.append(RevokeCollectionApprovalResult(Err=RevokeCollectionApprovalError(ApprovalDoesNotExist=null)))
                 continue
             approvals[0].delete()
         else:
@@ -959,14 +992,14 @@ def icrc37_transfer_from(args: Vec[TransferFromArg]) -> Vec[Opt[TransferFromResu
         token = _get_token(arg["token_id"])
         
         if not token:
-            results.append(TransferFromResult(Err=TransferFromError(NonExistingTokenId=None)))
+            results.append(TransferFromResult(Err=TransferFromError(NonExistingTokenId=null)))
             continue
         
         from_account = arg["from_"]
         
         # Check that from_account is the actual owner
         if not _is_owner(token, from_account):
-            results.append(TransferFromResult(Err=TransferFromError(Unauthorized=None)))
+            results.append(TransferFromResult(Err=TransferFromError(Unauthorized=null)))
             continue
         
         # Build spender account (caller)
@@ -977,13 +1010,13 @@ def icrc37_transfer_from(args: Vec[TransferFromArg]) -> Vec[Opt[TransferFromResu
         
         # Check approval (unless caller is owner)
         if not _is_owner(token, spender_account) and not _is_approved(token, spender_account):
-            results.append(TransferFromResult(Err=TransferFromError(Unauthorized=None)))
+            results.append(TransferFromResult(Err=TransferFromError(Unauthorized=null)))
             continue
         
         # Check recipient is not the same as sender
         to_account = arg["to"]
         if _is_owner(token, to_account):
-            results.append(TransferFromResult(Err=TransferFromError(InvalidRecipient=None)))
+            results.append(TransferFromResult(Err=TransferFromError(InvalidRecipient=null)))
             continue
         
         # Perform transfer
@@ -1034,16 +1067,16 @@ def mint(arg: MintArg) -> MintResult:
     if collection.test_mode != 1:
         # In production, only the canister controller can mint
         # For now, we'll allow anyone in test mode
-        return MintResult(Err=MintError(Unauthorized=None))
+        return MintResult(Err=MintError(Unauthorized=null))
     
     # Check supply cap
     if collection.supply_cap > 0 and collection.total_supply >= collection.supply_cap:
-        return MintResult(Err=MintError(SupplyCapReached=None))
+        return MintResult(Err=MintError(SupplyCapReached=null))
     
     # Check token ID doesn't exist
     existing = _get_token(arg["token_id"])
     if existing:
-        return MintResult(Err=MintError(TokenIdAlreadyExists=None))
+        return MintResult(Err=MintError(TokenIdAlreadyExists=null))
     
     # Convert metadata to JSON
     import json
@@ -1084,17 +1117,32 @@ def mint(arg: MintArg) -> MintResult:
 
 
 @query
-def icrc7_supported_standards() -> Vec[Record]:
+def icrc7_supported_standards() -> Vec[StandardRecord]:
     """Returns the list of standards supported by this canister."""
     return [
-        {"name": "ICRC-7", "url": "https://github.com/dfinity/ICRC/blob/main/ICRCs/ICRC-7/ICRC-7.md"},
-        {"name": "ICRC-37", "url": "https://github.com/dfinity/ICRC/blob/main/ICRCs/ICRC-37/ICRC-37.md"},
+        StandardRecord(name="ICRC-7", url="https://github.com/dfinity/ICRC/blob/main/ICRCs/ICRC-7/ICRC-7.md"),
+        StandardRecord(name="ICRC-37", url="https://github.com/dfinity/ICRC/blob/main/ICRCs/ICRC-37/ICRC-37.md"),
     ]
 
 
 @query
-def get_transactions(start: nat, length: nat) -> Vec[NFTTransactionLog]:
+def get_transactions(start: nat, length: nat) -> Vec[TransactionRecord]:
     """Get transaction history (for debugging/indexer)."""
     all_txs = NFTTransactionLog.find_all()
     sorted_txs = sorted(all_txs, key=lambda x: x.id)
-    return sorted_txs[int(start):int(start) + int(length)]
+    result = []
+    for tx in sorted_txs[int(start):int(start) + int(length)]:
+        result.append(TransactionRecord(
+            id=tx.id,
+            kind=tx.kind,
+            timestamp=tx.timestamp,
+            token_id=tx.token_id,
+            from_principal=tx.from_principal,
+            from_subaccount=tx.from_subaccount,
+            to_principal=tx.to_principal,
+            to_subaccount=tx.to_subaccount,
+            spender_principal=tx.spender_principal,
+            spender_subaccount=tx.spender_subaccount,
+            memo=tx.memo
+        ))
+    return result
