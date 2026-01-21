@@ -40,7 +40,7 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          ./token/scripts/bump_version.sh ${{ github.event.inputs.release_type }}
+          ./scripts/bump_version.sh ${{ github.event.inputs.release_type }}
           NEW_VERSION=$(cat version.txt)
           echo "VERSION=v${NEW_VERSION}" >> $GITHUB_OUTPUT
       

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Bump version (patch, minor, or major)
-# Usage: ./token/scripts/bump_version.sh [patch|minor|major]
+# Usage: ./scripts/bump_version.sh [patch|minor|major]
 # Requires: pip install semver
 
 set -e
