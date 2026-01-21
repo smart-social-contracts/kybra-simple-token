@@ -1,6 +1,19 @@
 # kybra-simple-token
 
-An ICRC-1 token implementation in Kybra using `kybra`, `kybra-simple-db`, and `kybra_simple_logging`.
+Token implementations for the Internet Computer using Kybra (Python CDK).
+
+## Modules
+
+| Module | Standards | Description |
+|--------|-----------|-------------|
+| [`token/`](./token/) | **ICRC-1** | Fungible token implementation |
+| [`nft/`](./nft/) | **ICRC-7, ICRC-37** | NFT with approvals & transfer-from |
+
+---
+
+## ICRC-1 Fungible Token (`token/`)
+
+An ICRC-1 token implementation using `kybra`, `kybra-simple-db`, and `kybra_simple_logging`.
 
 ## Live Demo (Staging)
 
@@ -186,16 +199,69 @@ python3 tests/backend/test_token.py
 
 ```
 kybra-simple-token/
-├── .github/workflows/    # CI/CD workflows
-├── token/
+├── .github/workflows/       # CI/CD workflows
+├── token/                   # ICRC-1 Fungible Token
 │   ├── src/
 │   │   ├── token_backend/   # Kybra Python backend
 │   │   └── token_frontend/  # SvelteKit frontend
-│   ├── tests/               # Unit tests
-│   ├── Dockerfile
+│   ├── tests/
+│   └── dfx.json
+├── nft/                     # ICRC-7/ICRC-37 NFT
+│   ├── src/
+│   │   └── nft_backend/     # Kybra Python backend
+│   ├── tests/
 │   └── dfx.json
 └── README.md
 ```
+
+---
+
+## ICRC-7/ICRC-37 NFT (`nft/`)
+
+A non-fungible token implementation with approval and transfer-from support.
+
+### Features
+
+- **ICRC-7** - NFT standard (ownership, metadata, transfers)
+- **ICRC-37** - Approval & transfer-from (delegated transfers, marketplace support)
+- Transaction history logging
+- Supply cap enforcement
+
+### Quick Start
+
+```bash
+cd nft
+pip install -r requirements.txt
+dfx start --clean --background
+dfx deploy
+```
+
+### Usage
+
+```bash
+# Mint an NFT (test mode)
+dfx canister call nft_backend mint '(record {
+    token_id = 1;
+    owner = record { owner = principal "'$(dfx identity get-principal)'"; subaccount = null };
+    metadata = opt vec { record { "name"; variant { Text = "My NFT" } } }
+})'
+
+# Check owner
+dfx canister call nft_backend icrc7_owner_of '(1)'
+
+# Transfer NFT
+dfx canister call nft_backend icrc7_transfer '(vec { record {
+    from_subaccount = null;
+    to = record { owner = principal "xxxxx-xxxxx"; subaccount = null };
+    token_id = 1;
+    memo = null;
+    created_at_time = null
+}})'
+```
+
+See [`nft/README.md`](./nft/README.md) for full API documentation.
+
+---
 
 ## License
 

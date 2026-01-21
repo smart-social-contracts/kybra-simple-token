@@ -28,10 +28,16 @@ jobs:
           pip install -q flake8 black isort
           ./token/scripts/run_linters.sh
           
-          echo '=== Unit Tests ==='
+          echo '=== Unit Tests (Token) ==='
           cd token && python tests/backend/test_token.py && cd ..
           
-          echo '=== Integration Tests ==='
+          echo '=== Unit Tests (NFT) ==='
+          cd nft && python tests/backend/test_nft.py && cd ..
+          
+          echo '=== Integration Tests (Token) ==='
           ./token/scripts/run_integration_tests.sh
+          
+          echo '=== Integration Tests (NFT) ==='
+          cd nft && ./tests/integration/entrypoint.sh && cd ..
           
           echo '=== All CI checks passed! ==='"

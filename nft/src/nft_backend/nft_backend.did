@@ -1,0 +1,245 @@
+// ICRC-7 / ICRC-37 NFT Canister Interface
+// https://github.com/dfinity/ICRC/blob/main/ICRCs/ICRC-7/ICRC-7.md
+// https://github.com/dfinity/ICRC/blob/main/ICRCs/ICRC-37/ICRC-37.md
+
+type Account = record {
+    owner : principal;
+    subaccount : opt blob;
+};
+
+type MetadataValue = variant {
+    Text : text;
+    Blob : blob;
+    Nat : nat;
+    Int : int;
+};
+
+// ICRC-7 Transfer types
+type TransferArg = record {
+    from_subaccount : opt blob;
+    to : Account;
+    token_id : nat;
+    memo : opt blob;
+    created_at_time : opt nat64;
+};
+
+type TransferError = variant {
+    NonExistingTokenId;
+    InvalidRecipient;
+    Unauthorized;
+    TooOld;
+    CreatedInFuture : record { ledger_time : nat64 };
+    Duplicate : record { duplicate_of : nat };
+    GenericError : record { error_code : nat; message : text };
+    GenericBatchError : record { error_code : nat; message : text };
+};
+
+type TransferResult = variant {
+    Ok : nat;
+    Err : TransferError;
+};
+
+// ICRC-37 Approval types
+type ApprovalInfo = record {
+    spender : Account;
+    from_subaccount : opt blob;
+    expires_at : opt nat64;
+    memo : opt blob;
+    created_at_time : opt nat64;
+};
+
+type ApproveTokenArg = record {
+    token_id : nat;
+    approval_info : ApprovalInfo;
+};
+
+type ApproveTokenError = variant {
+    NonExistingTokenId;
+    Unauthorized;
+    TooOld;
+    CreatedInFuture : record { ledger_time : nat64 };
+    GenericError : record { error_code : nat; message : text };
+    GenericBatchError : record { error_code : nat; message : text };
+};
+
+type ApproveTokenResult = variant {
+    Ok : nat;
+    Err : ApproveTokenError;
+};
+
+type ApproveCollectionArg = record {
+    approval_info : ApprovalInfo;
+};
+
+type ApproveCollectionError = variant {
+    TooOld;
+    CreatedInFuture : record { ledger_time : nat64 };
+    GenericError : record { error_code : nat; message : text };
+    GenericBatchError : record { error_code : nat; message : text };
+};
+
+type ApproveCollectionResult = variant {
+    Ok : nat;
+    Err : ApproveCollectionError;
+};
+
+type RevokeTokenApprovalArg = record {
+    token_id : nat;
+    spender : opt Account;
+    from_subaccount : opt blob;
+    memo : opt blob;
+    created_at_time : opt nat64;
+};
+
+type RevokeTokenApprovalError = variant {
+    NonExistingTokenId;
+    Unauthorized;
+    ApprovalDoesNotExist;
+    TooOld;
+    CreatedInFuture : record { ledger_time : nat64 };
+    GenericError : record { error_code : nat; message : text };
+    GenericBatchError : record { error_code : nat; message : text };
+};
+
+type RevokeTokenApprovalResult = variant {
+    Ok : nat;
+    Err : RevokeTokenApprovalError;
+};
+
+type RevokeCollectionApprovalArg = record {
+    spender : opt Account;
+    from_subaccount : opt blob;
+    memo : opt blob;
+    created_at_time : opt nat64;
+};
+
+type RevokeCollectionApprovalError = variant {
+    ApprovalDoesNotExist;
+    TooOld;
+    CreatedInFuture : record { ledger_time : nat64 };
+    GenericError : record { error_code : nat; message : text };
+    GenericBatchError : record { error_code : nat; message : text };
+};
+
+type RevokeCollectionApprovalResult = variant {
+    Ok : nat;
+    Err : RevokeCollectionApprovalError;
+};
+
+type TransferFromArg = record {
+    spender_subaccount : opt blob;
+    from_ : Account;
+    to : Account;
+    token_id : nat;
+    memo : opt blob;
+    created_at_time : opt nat64;
+};
+
+type TransferFromError = variant {
+    NonExistingTokenId;
+    InvalidRecipient;
+    Unauthorized;
+    TooOld;
+    CreatedInFuture : record { ledger_time : nat64 };
+    Duplicate : record { duplicate_of : nat };
+    GenericError : record { error_code : nat; message : text };
+    GenericBatchError : record { error_code : nat; message : text };
+};
+
+type TransferFromResult = variant {
+    Ok : nat;
+    Err : TransferFromError;
+};
+
+type TokenApproval = record {
+    token_id : nat;
+    approval_info : ApprovalInfo;
+};
+
+type CollectionApproval = record {
+    approval_info : ApprovalInfo;
+};
+
+// Init argument
+type InitArg = record {
+    name : text;
+    symbol : text;
+    description : opt text;
+    supply_cap : opt nat;
+    test : opt bool;
+};
+
+// Mint types
+type MintArg = record {
+    token_id : nat;
+    owner : Account;
+    metadata : opt vec record { text; MetadataValue };
+};
+
+type MintError = variant {
+    Unauthorized;
+    TokenIdAlreadyExists;
+    SupplyCapReached;
+    GenericError : record { error_code : nat; message : text };
+};
+
+type MintResult = variant {
+    Ok : nat;
+    Err : MintError;
+};
+
+// Standard info
+type Standard = record {
+    name : text;
+    url : text;
+};
+
+// Transaction log for debugging
+type NFTTransactionLog = record {
+    id : nat;
+    kind : text;
+    timestamp : nat;
+    token_id : nat;
+    from_principal : text;
+    from_subaccount : text;
+    to_principal : text;
+    to_subaccount : text;
+    spender_principal : text;
+    spender_subaccount : text;
+    memo : text;
+};
+
+service : (InitArg) -> {
+    // ICRC-7 Query Methods
+    icrc7_name : () -> (text) query;
+    icrc7_symbol : () -> (text) query;
+    icrc7_description : () -> (opt text) query;
+    icrc7_total_supply : () -> (nat) query;
+    icrc7_supply_cap : () -> (opt nat) query;
+    icrc7_collection_metadata : () -> (vec record { text; MetadataValue }) query;
+    icrc7_token_metadata : (nat) -> (opt vec record { text; MetadataValue }) query;
+    icrc7_owner_of : (nat) -> (opt Account) query;
+    icrc7_balance_of : (Account) -> (nat) query;
+    icrc7_tokens : (opt nat, opt nat) -> (vec nat) query;
+    icrc7_tokens_of : (Account, opt nat, opt nat) -> (vec nat) query;
+    icrc7_supported_standards : () -> (vec Standard) query;
+    
+    // ICRC-7 Update Methods
+    icrc7_transfer : (vec TransferArg) -> (vec opt TransferResult);
+    
+    // ICRC-37 Query Methods
+    icrc37_is_approved : (Account, opt blob, nat) -> (bool) query;
+    icrc37_get_token_approvals : (nat, opt Account, opt nat) -> (vec TokenApproval) query;
+    icrc37_get_collection_approvals : (Account, opt Account, opt nat) -> (vec CollectionApproval) query;
+    
+    // ICRC-37 Update Methods
+    icrc37_approve_tokens : (vec ApproveTokenArg) -> (vec opt ApproveTokenResult);
+    icrc37_approve_collection : (vec ApproveCollectionArg) -> (vec opt ApproveCollectionResult);
+    icrc37_revoke_token_approvals : (vec RevokeTokenApprovalArg) -> (vec opt RevokeTokenApprovalResult);
+    icrc37_revoke_collection_approvals : (vec RevokeCollectionApprovalArg) -> (vec opt RevokeCollectionApprovalResult);
+    icrc37_transfer_from : (vec TransferFromArg) -> (vec opt TransferFromResult);
+    
+    // Admin / Test Methods
+    mint : (MintArg) -> (MintResult);
+    get_transactions : (nat, nat) -> (vec NFTTransactionLog) query;
+}

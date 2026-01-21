@@ -54,10 +54,20 @@ jobs:
             ${{ env.ICP_DEV_IMAGE }} bash -c '
           set -e
           dfxvm default 0.29.0
+          
+          echo "=== Building Token (ICRC-1) ==="
           cd token
           pip install -q -r requirements.txt
           cd src/token_frontend && npm install && cd ../..
           ./scripts/build_canister.sh /workspace/artifacts
+          cd ..
+          
+          echo "=== Building NFT (ICRC-7/ICRC-37) ==="
+          cd nft
+          pip install -q -r requirements.txt
+          ./scripts/build_canister.sh /workspace/artifacts
+          cd ..
+          
           echo "Version: $VERSION" >> /workspace/artifacts/BUILD_INFO.txt'
       
       - name: Commit and push version
@@ -72,20 +82,20 @@ jobs:
           tag_name: ${{ steps.version.outputs.VERSION }}
           name: Release ${{ steps.version.outputs.VERSION }}
           body: |
-            ## ICRC-1 Token Release ${{ steps.version.outputs.VERSION }}
+            ## Kybra Simple Token Release ${{ steps.version.outputs.VERSION }}
             
-            ### What's Changed
-            - 🐛 **Bug Fix**: Fixed Candid record deserialization in `icrc1_transfer`, `icrc1_balance_of`, and `get_account_transactions` (dict access instead of dot notation)
-            - ✅ **Integration Tests**: Added comprehensive integration test suite (27 tests) covering transfers, minting, balances, subaccounts, and transaction history
-            - 📝 **Documentation**: Added staging canister links to README
-            
-            ### Staging Demo
-            - 🌐 Frontend: https://xglmt-7aaaa-aaaah-qq3yq-cai.icp0.io
-            - Backend: `xbkkh-syaaa-aaaah-qq3ya-cai`
+            ### Modules
+            - **Token (ICRC-1)**: Fungible token implementation
+            - **NFT (ICRC-7/ICRC-37)**: Non-fungible token implementation
             
             ### Artifacts
-            - `token_backend.wasm` - Backend canister (Kybra Python)
-            - `token_frontend.wasm` - Frontend canister (SvelteKit)
+            #### Token (ICRC-1)
+            - `token_backend.wasm` - Token backend canister (Kybra Python)
+            - `token_frontend.wasm` - Token frontend canister (SvelteKit)
+            
+            #### NFT (ICRC-7/ICRC-37)
+            - `nft_backend.wasm` - NFT backend canister (Kybra Python)
+            - `nft_frontend.wasm` - NFT frontend canister (SvelteKit)
           files: |
             artifacts/token_backend.wasm.gz
             artifacts/token_backend.wasm
@@ -93,6 +103,12 @@ jobs:
             artifacts/token_frontend.wasm.gz
             artifacts/token_frontend.wasm
             artifacts/token_frontend.did
+            artifacts/nft_backend.wasm.gz
+            artifacts/nft_backend.wasm
+            artifacts/nft_backend.did
+            artifacts/nft_frontend.wasm.gz
+            artifacts/nft_frontend.wasm
+            artifacts/nft_frontend.did
             artifacts/BUILD_INFO.txt
           draft: false
           prerelease: false
