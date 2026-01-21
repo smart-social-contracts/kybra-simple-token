@@ -352,16 +352,15 @@ def _subaccount_to_hex(subaccount: Opt[blob]) -> str:
 
 def _get_collection() -> NFTCollection:
     """Get or create collection config."""
-    collections = NFTCollection.find_all()
-    if collections:
-        return collections[0]
+    collection = NFTCollection["config"]
+    if collection:
+        return collection
     raise Exception("Collection not initialized")
 
 
 def _get_token(token_id: nat) -> Opt[NFTToken]:
     """Get token by ID."""
-    tokens = NFTToken.find_by("id", int(token_id))
-    return tokens[0] if tokens else None
+    return NFTToken[int(token_id)]
 
 
 def _is_owner(token: NFTToken, account: Account) -> bool:
@@ -391,17 +390,15 @@ def _is_approved(token: NFTToken, spender: Account) -> bool:
     
     # Check token-level approval
     token_approval_id = _get_approval_id("token", token.id, owner_account, spender)
-    token_approvals = NFTApproval.find_by("id", token_approval_id)
-    if token_approvals:
-        approval = token_approvals[0]
+    approval = NFTApproval[token_approval_id]
+    if approval:
         if approval.expires_at == 0 or approval.expires_at > now:
             return True
     
     # Check collection-level approval
     collection_approval_id = _get_approval_id("collection", 0, owner_account, spender)
-    collection_approvals = NFTApproval.find_by("id", collection_approval_id)
-    if collection_approvals:
-        approval = collection_approvals[0]
+    approval = NFTApproval[collection_approval_id]
+    if approval:
         if approval.expires_at == 0 or approval.expires_at > now:
             return True
     
@@ -561,7 +558,7 @@ def icrc7_balance_of(account: Account) -> nat:
     principal = account["owner"].to_str()
     subaccount = _subaccount_to_hex(account.get("subaccount"))
     
-    all_tokens = NFTToken.find_all()
+    all_tokens = NFTToken.instances()
     count = 0
     for token in all_tokens:
         if token.owner_principal == principal and token.owner_subaccount == subaccount:
@@ -572,7 +569,7 @@ def icrc7_balance_of(account: Account) -> nat:
 @query
 def icrc7_tokens(prev: Opt[nat], take: Opt[nat]) -> Vec[nat]:
     """Returns a paginated list of all token IDs."""
-    all_tokens = NFTToken.find_all()
+    all_tokens = NFTToken.instances()
     token_ids = sorted([token.id for token in all_tokens])
     
     start_idx = 0
@@ -594,7 +591,7 @@ def icrc7_tokens_of(account: Account, prev: Opt[nat], take: Opt[nat]) -> Vec[nat
     principal = account["owner"].to_str()
     subaccount = _subaccount_to_hex(account.get("subaccount"))
     
-    all_tokens = NFTToken.find_all()
+    all_tokens = NFTToken.instances()
     owned_ids = sorted([
         token.id for token in all_tokens
         if token.owner_principal == principal and token.owner_subaccount == subaccount
@@ -655,7 +652,7 @@ def icrc7_transfer(args: Vec[TransferArg]) -> Vec[Opt[TransferResult]]:
         token.owner_subaccount = _subaccount_to_hex(to_account.get("subaccount"))
         
         # Clear token-level approvals for this token
-        all_approvals = NFTApproval.find_all()
+        all_approvals = NFTApproval.instances()
         for approval in all_approvals:
             if approval.approval_type == "token" and approval.token_id == int(arg["token_id"]):
                 approval.delete()
@@ -705,7 +702,7 @@ def icrc37_get_token_approvals(token_id: nat, prev: Opt[Account], take: Opt[nat]
     if not token:
         return []
     
-    all_approvals = NFTApproval.find_all()
+    all_approvals = NFTApproval.instances()
     token_approvals = [
         a for a in all_approvals
         if a.approval_type == "token" and a.token_id == int(token_id)
@@ -746,7 +743,7 @@ def icrc37_get_collection_approvals(owner: Account, prev: Opt[Account], take: Op
     owner_principal = owner["owner"].to_str()
     owner_subaccount = _subaccount_to_hex(owner.get("subaccount"))
     
-    all_approvals = NFTApproval.find_all()
+    all_approvals = NFTApproval.instances()
     collection_approvals = [
         a for a in all_approvals
         if a.approval_type == "collection"
@@ -909,14 +906,14 @@ def icrc37_revoke_token_approvals(args: Vec[RevokeTokenApprovalArg]) -> Vec[Opt[
         if spender:
             # Revoke specific approval
             approval_id = _get_approval_id("token", int(arg["token_id"]), caller_account, spender)
-            approvals = NFTApproval.find_by("id", approval_id)
-            if not approvals:
+            approval = NFTApproval[approval_id]
+            if not approval:
                 results.append(RevokeTokenApprovalResult(Err=RevokeTokenApprovalError(ApprovalDoesNotExist=null)))
                 continue
-            approvals[0].delete()
+            approval.delete()
         else:
             # Revoke all approvals for this token
-            all_approvals = NFTApproval.find_all()
+            all_approvals = NFTApproval.instances()
             for approval in all_approvals:
                 if approval.approval_type == "token" and approval.token_id == int(arg["token_id"]):
                     if approval.owner_principal == caller.to_str():
@@ -950,14 +947,14 @@ def icrc37_revoke_collection_approvals(args: Vec[RevokeCollectionApprovalArg]) -
         if spender:
             # Revoke specific collection approval
             approval_id = _get_approval_id("collection", 0, caller_account, spender)
-            approvals = NFTApproval.find_by("id", approval_id)
-            if not approvals:
+            approval = NFTApproval[approval_id]
+            if not approval:
                 results.append(RevokeCollectionApprovalResult(Err=RevokeCollectionApprovalError(ApprovalDoesNotExist=null)))
                 continue
-            approvals[0].delete()
+            approval.delete()
         else:
             # Revoke all collection approvals for this owner
-            all_approvals = NFTApproval.find_all()
+            all_approvals = NFTApproval.instances()
             owner_sub = _subaccount_to_hex(arg.get("from_subaccount"))
             for approval in all_approvals:
                 if approval.approval_type == "collection":
@@ -1021,7 +1018,7 @@ def icrc37_transfer_from(args: Vec[TransferFromArg]) -> Vec[Opt[TransferFromResu
         token.owner_subaccount = _subaccount_to_hex(to_account.get("subaccount"))
         
         # Clear token-level approvals for this token
-        all_approvals = NFTApproval.find_all()
+        all_approvals = NFTApproval.instances()
         for approval in all_approvals:
             if approval.approval_type == "token" and approval.token_id == int(arg["token_id"]):
                 approval.delete()
@@ -1119,7 +1116,7 @@ def icrc7_supported_standards() -> Vec[StandardRecord]:
 @query
 def get_transactions(start: nat, length: nat) -> Vec[TransactionRecord]:
     """Get transaction history (for debugging/indexer)."""
-    all_txs = NFTTransactionLog.find_all()
+    all_txs = NFTTransactionLog.instances()
     sorted_txs = sorted(all_txs, key=lambda x: x.id)
     result = []
     for tx in sorted_txs[int(start):int(start) + int(length)]:
