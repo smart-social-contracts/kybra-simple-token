@@ -1,4 +1,4 @@
-name: Deploy to Staging
+name: Deploy NFT to Staging
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       
-      - name: Deploy to staging
+      - name: Deploy NFT to staging
         env:
           IC_IDENTITY_PEM: ${{ secrets.IC_IDENTITY_PEM }}
         run: |
@@ -45,5 +45,5 @@ jobs:
           set -e
           dfxvm default 0.29.0
           dfx identity use ci
-          cd token
+          cd nft
           ./scripts/deploy_staging.sh $REINSTALL_ARG"

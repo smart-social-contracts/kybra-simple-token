@@ -18,17 +18,27 @@ from kybra import (
     nat32,
     nat64,
     blob,
+    null,
     Opt,
     Principal,
     query,
     Record,
+    StableBTreeMap,
+    Tuple,
     update,
     Variant,
     Vec,
+    void,
     ic,
 )
-from kybra_simple_db import Entity, Integer, String
+from kybra_simple_db import Database, Entity, Integer, String
 from kybra_simple_logging import get_logger
+
+# Initialize stable storage for the database
+storage = StableBTreeMap[str, str](
+    memory_id=1, max_key_size=200, max_value_size=100_000
+)
+Database.init(db_storage=storage, audit_enabled=True)
 
 logger = get_logger("nft_backend")
 
@@ -50,10 +60,10 @@ class TransferArg(Record):
 
 
 class TransferError(Variant, total=False):
-    NonExistingTokenId: None
-    InvalidRecipient: None
-    Unauthorized: None
-    TooOld: None
+    NonExistingTokenId: null
+    InvalidRecipient: null
+    Unauthorized: null
+    TooOld: null
     CreatedInFuture: "CreatedInFutureError"
     Duplicate: "DuplicateError"
     GenericError: "GenericError"
@@ -95,9 +105,9 @@ class ApproveTokenArg(Record):
 
 
 class ApproveTokenError(Variant, total=False):
-    NonExistingTokenId: None
-    Unauthorized: None
-    TooOld: None
+    NonExistingTokenId: null
+    Unauthorized: null
+    TooOld: null
     CreatedInFuture: "CreatedInFutureError"
     GenericError: "GenericError"
     GenericBatchError: "GenericBatchError"
@@ -111,7 +121,7 @@ class ApproveCollectionArg(Record):
 
 
 class ApproveCollectionError(Variant, total=False):
-    TooOld: None
+    TooOld: null
     CreatedInFuture: "CreatedInFutureError"
     GenericError: "GenericError"
     GenericBatchError: "GenericBatchError"
@@ -129,10 +139,10 @@ class RevokeTokenApprovalArg(Record):
 
 
 class RevokeTokenApprovalError(Variant, total=False):
-    NonExistingTokenId: None
-    Unauthorized: None
-    ApprovalDoesNotExist: None
-    TooOld: None
+    NonExistingTokenId: null
+    Unauthorized: null
+    ApprovalDoesNotExist: null
+    TooOld: null
     CreatedInFuture: "CreatedInFutureError"
     GenericError: "GenericError"
     GenericBatchError: "GenericBatchError"
@@ -149,8 +159,8 @@ class RevokeCollectionApprovalArg(Record):
 
 
 class RevokeCollectionApprovalError(Variant, total=False):
-    ApprovalDoesNotExist: None
-    TooOld: None
+    ApprovalDoesNotExist: null
+    TooOld: null
     CreatedInFuture: "CreatedInFutureError"
     GenericError: "GenericError"
     GenericBatchError: "GenericBatchError"
@@ -169,10 +179,10 @@ class TransferFromArg(Record):
 
 
 class TransferFromError(Variant, total=False):
-    NonExistingTokenId: None
-    InvalidRecipient: None
-    Unauthorized: None
-    TooOld: None
+    NonExistingTokenId: null
+    InvalidRecipient: null
+    Unauthorized: null
+    TooOld: null
     CreatedInFuture: "CreatedInFutureError"
     Duplicate: "DuplicateError"
     GenericError: "GenericError"
@@ -211,13 +221,13 @@ class InitArg(Record):
 class MintArg(Record):
     token_id: nat
     owner: Account
-    metadata: Opt[Vec[tuple[str, MetadataValue]]]
+    metadata: Opt[Vec[Tuple[str, MetadataValue]]]
 
 
 class MintError(Variant, total=False):
-    Unauthorized: None
-    TokenIdAlreadyExists: None
-    SupplyCapReached: None
+    Unauthorized: null
+    TokenIdAlreadyExists: null
+    SupplyCapReached: null
     GenericError: "GenericError"
 
 
@@ -278,6 +288,13 @@ class NFTTransactionLog(Entity):
     spender_principal = String(default="")  # For approve/transfer_from
     spender_subaccount = String(max_length=64, default="")
     memo = String(max_length=512, default="")
+
+
+# Register entity types
+Database.get_instance().register_entity_type(NFTToken)
+Database.get_instance().register_entity_type(NFTCollection)
+Database.get_instance().register_entity_type(NFTApproval)
+Database.get_instance().register_entity_type(NFTTransactionLog)
 
 
 # =============================================================================
@@ -402,7 +419,7 @@ def _log_transaction(
 # =============================================================================
 
 @init
-def init_(args: InitArg) -> None:
+def init_(args: InitArg) -> void:
     """Initialize the NFT collection."""
     logger.info(f"Initializing NFT collection: {args['name']} ({args['symbol']})")
     
@@ -457,7 +474,7 @@ def icrc7_supply_cap() -> Opt[nat]:
 
 
 @query
-def icrc7_collection_metadata() -> Vec[tuple[str, MetadataValue]]:
+def icrc7_collection_metadata() -> Vec[Tuple[str, MetadataValue]]:
     """Returns collection-level metadata."""
     collection = _get_collection()
     metadata = [
@@ -473,7 +490,7 @@ def icrc7_collection_metadata() -> Vec[tuple[str, MetadataValue]]:
 
 
 @query
-def icrc7_token_metadata(token_id: nat) -> Opt[Vec[tuple[str, MetadataValue]]]:
+def icrc7_token_metadata(token_id: nat) -> Opt[Vec[Tuple[str, MetadataValue]]]:
     """Returns metadata for a specific token."""
     token = _get_token(token_id)
     if not token:

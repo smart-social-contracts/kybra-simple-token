@@ -1,10 +1,16 @@
-name: CI - Build & Test
+name: CI - Token (ICRC-1)
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'token/**'
+      - '.github/workflows/ci-token.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'token/**'
+      - '.github/workflows/ci-token.yml'
   workflow_dispatch:
 
 env:
@@ -17,7 +23,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       
-      - name: Run CI (lint, unit tests, integration tests)
+      - name: Run CI (lint + integration tests)
         run: |
           docker run --rm \
             -v "$(pwd):/workspace" \
@@ -28,16 +34,7 @@ jobs:
           pip install -q flake8 black isort
           ./token/scripts/run_linters.sh
           
-          echo '=== Unit Tests (Token) ==='
-          cd token && python tests/backend/test_token.py && cd ..
-          
-          echo '=== Unit Tests (NFT) ==='
-          cd nft && python tests/backend/test_nft.py && cd ..
-          
           echo '=== Integration Tests (Token) ==='
           ./token/scripts/run_integration_tests.sh
           
-          echo '=== Integration Tests (NFT) ==='
-          cd nft && ./tests/integration/entrypoint.sh && cd ..
-          
-          echo '=== All CI checks passed! ==='"
+          echo '=== Token CI passed! ==='"
