@@ -1,17 +1,8 @@
 {
-  "agora_nft_backend": {
-    "staging": "4uolp-aqaaa-aaaaf-qdojq-cai"
-  },
-  "dominion_nft_backend": {
-    "staging": "4tpn3-niaaa-aaaaf-qdoja-cai"
-  },
   "nft_backend": {
     "staging": "6hrip-iiaaa-aaaaf-qdoha-cai"
   },
   "nft_frontend": {
     "staging": "6aqo3-fqaaa-aaaaf-qdohq-cai"
-  },
-  "syntropia_nft_backend": {
-    "staging": "4bj2c-byaaa-aaaaf-qdoka-cai"
   }
 }
