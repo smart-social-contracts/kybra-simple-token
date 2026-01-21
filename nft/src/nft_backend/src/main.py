@@ -1134,3 +1134,12 @@ def get_transactions(start: nat, length: nat) -> Vec[TransactionRecord]:
             memo=tx.memo
         ))
     return result
+
+
+@query
+def is_test_mode() -> bool:
+    """Check if the collection is in test mode."""
+    collection = NFTCollection["config"]
+    if collection:
+        return collection.test_mode == 1
+    return False

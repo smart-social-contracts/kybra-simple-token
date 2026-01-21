@@ -2,6 +2,15 @@
 
 Token implementations for the Internet Computer using Kybra (Python CDK).
 
+## 🚀 Live Demos
+
+| | Fungible Token (ICRC-1) | NFT (ICRC-7/37) |
+|--|-------------------------|-----------------|
+| **Try it now** | **[Token App](https://xglmt-7aaaa-aaaah-qq3yq-cai.icp0.io)** | **[NFT App](https://6aqo3-fqaaa-aaaaf-qdohq-cai.icp0.io)** |
+| Backend API | [Candid UI](https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=xbkkh-syaaa-aaaah-qq3ya-cai) | [Candid UI](https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=6hrip-iiaaa-aaaaf-qdoha-cai) |
+
+---
+
 ## Modules
 
 | Module | Standards | Description |
@@ -15,16 +24,14 @@ Token implementations for the Internet Computer using Kybra (Python CDK).
 
 An ICRC-1 token implementation using `kybra`, `kybra-simple-db`, and `kybra_simple_logging`.
 
-## Live Demo (Staging)
-
-🌐 **Frontend**: [https://xglmt-7aaaa-aaaah-qq3yq-cai.icp0.io](https://xglmt-7aaaa-aaaah-qq3yq-cai.icp0.io)
+### Canister IDs (Staging)
 
 | Canister | ID | Dashboard |
 |----------|----|----|
-| Backend | `xbkkh-syaaa-aaaah-qq3ya-cai` | [View on IC Dashboard](https://dashboard.internetcomputer.org/canister/xbkkh-syaaa-aaaah-qq3ya-cai) |
-| Frontend | `xglmt-7aaaa-aaaah-qq3yq-cai` | [View on IC Dashboard](https://dashboard.internetcomputer.org/canister/xglmt-7aaaa-aaaah-qq3yq-cai) |
+| Backend | `xbkkh-syaaa-aaaah-qq3ya-cai` | [View](https://dashboard.internetcomputer.org/canister/xbkkh-syaaa-aaaah-qq3ya-cai) |
+| Frontend | `xglmt-7aaaa-aaaah-qq3yq-cai` | [View](https://dashboard.internetcomputer.org/canister/xglmt-7aaaa-aaaah-qq3yq-cai) |
 
-## Features
+### Features
 
 - **ICRC-1 Compliant** - Full ICRC-1 token standard implementation
 - **Kybra Python Backend** - Built with Kybra CDK for the Internet Computer
@@ -220,12 +227,12 @@ kybra-simple-token/
 
 A non-fungible token implementation with approval and transfer-from support.
 
-### Live Demo (Staging)
+### Canister IDs (Staging)
 
 | Canister | ID | Dashboard |
 |----------|----|----|
-| Backend | `6hrip-iiaaa-aaaaf-qdoha-cai` | [View on IC Dashboard](https://dashboard.internetcomputer.org/canister/6hrip-iiaaa-aaaaf-qdoha-cai) |
-| Frontend | `6aqo3-fqaaa-aaaaf-qdohq-cai` | [View on IC Dashboard](https://dashboard.internetcomputer.org/canister/6aqo3-fqaaa-aaaaf-qdohq-cai) |
+| Backend | `6hrip-iiaaa-aaaaf-qdoha-cai` | [View](https://dashboard.internetcomputer.org/canister/6hrip-iiaaa-aaaaf-qdoha-cai) |
+| Frontend | `6aqo3-fqaaa-aaaaf-qdohq-cai` | [View](https://dashboard.internetcomputer.org/canister/6aqo3-fqaaa-aaaaf-qdohq-cai) |
 
 ### Features
 
