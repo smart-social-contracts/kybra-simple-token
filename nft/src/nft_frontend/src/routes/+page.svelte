@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { Principal } from '@dfinity/principal';
   import { backend } from '$lib/canisters';
 
   let loading = true;
@@ -99,7 +100,7 @@
       const result = await backend.mint({
         token_id: BigInt(mintTokenId),
         owner: {
-          owner: { toText: () => mintOwner, _isPrincipal: true },
+          owner: Principal.fromText(mintOwner),
           subaccount: []
         },
         metadata: metadata.length > 0 ? [metadata[0]] : []
